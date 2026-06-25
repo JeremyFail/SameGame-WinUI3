@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="SameGame.Controls.ObjectivesPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Width="148"
+    Background="{ThemeResource LayerFillColorDefaultBrush}"
+    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+    BorderThickness="1,0,0,0"
+    Visibility="Collapsed"
+    mc:Ignorable="d">
+    <Grid Padding="10,8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock
+            x:Name="HeaderLabel"
+            Grid.Row="0"
+            Margin="0,0,0,8"
+            FontSize="13"
+            FontWeight="SemiBold"
+            TextWrapping="Wrap" />
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="RowsPanel" Spacing="6" />
+        </ScrollViewer>
+    </Grid>
+</UserControl>

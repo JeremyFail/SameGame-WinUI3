@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "SameGame (Unpackaged)": {
+      "commandName": "Project"
+    },
+    "SameGame (Package)": {
+      "commandName": "MsixPackage"
+    }
+  }
+}
