@@ -138,5 +138,5 @@ Or open `SameGame-WinUI3.sln` in Visual Studio and press **F5**.
 
 ### Audio files
 
-Sound effects (`remove*.mp3`, `game-end.mp3`) are committed to the repo. Background music (`background*.mp3`) is listed in `.gitignore` - copy your tracks into `Assets/sounds/` locally (same filenames as the Java project).
+Sound effects (`remove*.mp3`, `game-end.mp3`) are committed to the repo. Background music (`background*.mp3`) is listed in `.gitignore` - copy your tracks into `Assets/sounds/` when building to include your preferred background audio tracks.
 
