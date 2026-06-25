@@ -5,6 +5,11 @@ namespace SameGame.Model;
 /// </summary>
 public static class Scoring
 {
+    /// <summary>
+    /// Calculates the points awarded for removing a group of the given size.
+    /// </summary>
+    /// <param name="groupSize">Number of blocks in the removed group.</param>
+    /// <returns>Points earned, or zero when <paramref name="groupSize"/> is less than two.</returns>
     public static int PointsForGroup(int groupSize)
     {
         if (groupSize < 2)

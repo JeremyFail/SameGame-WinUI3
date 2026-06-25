@@ -12,6 +12,17 @@ namespace SameGame.UI;
 /// </summary>
 internal static class GemRenderer
 {
+    /// <summary>
+    /// Draws a faceted gemstone tile with optional Y-axis spin animation.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="colorIndex">The palette index that selects the gem cut shape.</param>
+    /// <param name="highlighted">Whether to draw a selection overlay.</param>
+    /// <param name="spinDegrees">The Y-axis spin angle in degrees.</param>
     public static void Draw(
         CanvasDrawingSession ds, float x, float y, float size, Color baseColor,
         int colorIndex, bool highlighted, float spinDegrees)
@@ -21,17 +32,20 @@ internal static class GemRenderer
         float cy = y + size / 2f + size * 0.02f;
         float s = size / 2f - pad;
 
+        // Normalize spin to [0, 360) for consistent lighting.
         float spinNorm = spinDegrees % 360f;
         if (spinNorm < 0f)
         {
             spinNorm += 360f;
         }
 
+        // Drop shadow when facing the viewer (front face).
         if (spinNorm < 0.5f || spinNorm > 359.5f)
         {
             ds.FillEllipse(cx + 1, cy - s * 0.35f + 2, s * 0.82f, s * 0.28f, Color.FromArgb(60, 0, 0, 0));
         }
 
+        // Compute spin transform and lighting direction.
         float spinRad = spinNorm * MathF.PI / 180f;
         float cos = MathF.Cos(spinRad);
         float sin = MathF.Sin(spinRad);
@@ -46,6 +60,7 @@ internal static class GemRenderer
             Matrix3x2.CreateScale(scaleX, scaleY, new Vector2(cx, cy)),
             oldTransform);
 
+        // Draw the gem cut matching the color index.
         switch (colorIndex % 6)
         {
             case 0: DrawShieldBrilliant(ds, cx, cy, s, baseColor, lightX, lightY, frontWeight); break;
@@ -65,6 +80,17 @@ internal static class GemRenderer
         }
     }
 
+    /// <summary>
+    /// Draws a shield-brilliant cut gem with crown and pavilion facets.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawShieldBrilliant(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -88,6 +114,17 @@ internal static class GemRenderer
         FillFacets(ds, pavilion, baseColor, lightX, lightY + 0.3f, frontWeight * 0.85f, cx, cy);
     }
 
+    /// <summary>
+    /// Draws a square cushion cut gem.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawSquareCushion(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -107,6 +144,17 @@ internal static class GemRenderer
         FillFacets(ds, points, baseColor, lightX, lightY, frontWeight, cx, cy);
     }
 
+    /// <summary>
+    /// Draws a triangle cut gem with an inner table facet.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawTriangleCut(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -127,6 +175,17 @@ internal static class GemRenderer
         FillFacet(ds, inner, FacetColor(baseColor, lightX, lightY, frontWeight, 0.35f, cx, cy));
     }
 
+    /// <summary>
+    /// Draws a diamond brilliant cut gem with crown and pavilion.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawDiamondBrilliant(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -148,6 +207,17 @@ internal static class GemRenderer
         FillFacets(ds, bottom, baseColor, lightX, lightY + 0.25f, frontWeight * 0.9f, cx, cy);
     }
 
+    /// <summary>
+    /// Draws a round brilliant cut gem with a table facet.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawRoundBrilliant(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -164,6 +234,17 @@ internal static class GemRenderer
         ds.FillEllipse(cx, cy, s * 0.28f, s * 0.28f, FacetColor(baseColor, lightX, lightY, frontWeight, 0.5f, cx, cy));
     }
 
+    /// <summary>
+    /// Draws a hexagonal cut gem.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawHexCut(
         CanvasDrawingSession ds, float cx, float cy, float s, Color baseColor,
         float lightX, float lightY, float frontWeight)
@@ -178,6 +259,17 @@ internal static class GemRenderer
         FillFacets(ds, points, baseColor, lightX, lightY, frontWeight, cx, cy);
     }
 
+    /// <summary>
+    /// Fills triangular facets radiating from the center of a polygon outline.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="points">The outer vertices of the gem outline.</param>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
+    /// <param name="cx">The horizontal center used as the facet hub.</param>
+    /// <param name="cy">The vertical center used as the facet hub.</param>
     private static void FillFacets(
         CanvasDrawingSession ds, Vector2[] points, Color baseColor,
         float lightX, float lightY, float frontWeight, float cx, float cy)
@@ -191,6 +283,12 @@ internal static class GemRenderer
         }
     }
 
+    /// <summary>
+    /// Fills and outlines a single triangular facet polygon.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="points">The three vertices of the facet.</param>
+    /// <param name="color">The fill color of the facet.</param>
     private static void FillFacet(CanvasDrawingSession ds, Vector2[] points, Color color)
     {
         using var geom = CanvasGeometry.CreatePolygon(ds, points);
@@ -198,6 +296,15 @@ internal static class GemRenderer
         ds.DrawGeometry(geom, Blend(color, Color.FromArgb(255, 255, 255, 255), 0.15f), 0.5f);
     }
 
+    /// <summary>
+    /// Draws a specular highlight ellipse on the gem surface.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the gem in pixels.</param>
+    /// <param name="cy">The vertical center of the gem in pixels.</param>
+    /// <param name="s">The half-size scale factor of the gem.</param>
+    /// <param name="sin">The sine of the spin angle, used to shift the highlight.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
     private static void DrawSpecular(CanvasDrawingSession ds, float cx, float cy, float s, float sin, float frontWeight)
     {
         float alpha = 80f + frontWeight * 120f;
@@ -206,6 +313,17 @@ internal static class GemRenderer
         ds.FillEllipse(sx, sy, s * 0.18f, s * 0.1f, Color.FromArgb((byte)alpha, 255, 255, 255));
     }
 
+    /// <summary>
+    /// Computes the shaded color for a single facet based on lighting and position.
+    /// </summary>
+    /// <param name="baseColor">The base color of the gem.</param>
+    /// <param name="lightX">The normalized horizontal light direction.</param>
+    /// <param name="lightY">The normalized vertical light direction.</param>
+    /// <param name="frontWeight">The front-face lighting weight (0–1).</param>
+    /// <param name="facetT">The facet position factor along the outline (0–1).</param>
+    /// <param name="cx">The horizontal center of the gem.</param>
+    /// <param name="cy">The vertical center of the gem.</param>
+    /// <returns>The computed facet fill color.</returns>
     private static Color FacetColor(
         Color baseColor, float lightX, float lightY, float frontWeight, float facetT, float cx, float cy)
     {
@@ -218,8 +336,20 @@ internal static class GemRenderer
             highlight * 0.35f);
     }
 
+    /// <summary>
+    /// Applies a smooth Hermite interpolation to <paramref name="t"/>.
+    /// </summary>
+    /// <param name="t">The input value (typically 0–1).</param>
+    /// <returns>The smoothstep-interpolated value.</returns>
     private static float Smoothstep(float t) => t * t * (3f - 2f * t);
 
+    /// <summary>
+    /// Linearly interpolates between two colors in RGB space.
+    /// </summary>
+    /// <param name="a">The start color.</param>
+    /// <param name="b">The end color.</param>
+    /// <param name="t">The blend factor (0 = <paramref name="a"/>, 1 = <paramref name="b"/>).</param>
+    /// <returns>The blended color with full opacity.</returns>
     private static Color Blend(Color a, Color b, float t)
     {
         t = Math.Clamp(t, 0f, 1f);

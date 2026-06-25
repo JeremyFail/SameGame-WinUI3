@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Media;
 namespace SameGame.UI;
 
 /// <summary>
-/// Layout constants for the Advanced Options dialog. Tweak these to adjust dialog sizing.
+/// Layout constants and factory helpers for the Advanced Options dialog. Tweak these to adjust dialog sizing.
 /// </summary>
 internal static class SettingsLayoutHelper
 {
@@ -30,6 +30,12 @@ internal static class SettingsLayoutHelper
     /// <summary>Maximum height of each settings tab scroll area when space allows.</summary>
     public const double PageMaxHeight = 380;
 
+    /// <summary>
+    /// Creates a themed card border wrapping a titled section of settings controls.
+    /// </summary>
+    /// <param name="title">Optional section title; omitted when null or empty.</param>
+    /// <param name="children">The controls to place inside the section body.</param>
+    /// <returns>A styled border containing the section layout.</returns>
     public static Border CreateSection(string? title, params UIElement[] children)
     {
         var body = new StackPanel { Spacing = 10 };
@@ -64,6 +70,11 @@ internal static class SettingsLayoutHelper
         return border;
     }
 
+    /// <summary>
+    /// Creates a vertical stack of section elements for a settings tab page.
+    /// </summary>
+    /// <param name="sections">The section borders or controls to stack.</param>
+    /// <returns>A stretch-aligned stack panel containing all sections.</returns>
     public static UIElement CreatePage(params UIElement[] sections)
     {
         var stack = new StackPanel
@@ -79,6 +90,10 @@ internal static class SettingsLayoutHelper
         return stack;
     }
 
+    /// <summary>
+    /// Creates a fixed-height scroll viewer sized for a settings tab page.
+    /// </summary>
+    /// <returns>A scroll viewer configured with <see cref="PageMaxHeight"/> bounds.</returns>
     public static ScrollViewer CreatePageScrollViewer()
     {
         return new ScrollViewer
@@ -94,6 +109,12 @@ internal static class SettingsLayoutHelper
         };
     }
 
+    /// <summary>
+    /// Creates a two-column grid row with equal star-width columns.
+    /// </summary>
+    /// <param name="left">The control placed in the left column.</param>
+    /// <param name="right">The control placed in the right column.</param>
+    /// <returns>A grid containing both controls in a 1:1 column layout.</returns>
     public static Grid CreateTwoColumnRow(FrameworkElement left, FrameworkElement right)
     {
         var grid = new Grid { ColumnSpacing = 12 };

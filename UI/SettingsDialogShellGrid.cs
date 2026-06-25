@@ -14,12 +14,28 @@ internal sealed class SettingsDialogShellGrid : Grid
     private ContentDialog? _hostDialog;
     private double _resolvedPageHeight = SettingsLayoutHelper.PageMaxHeight;
 
+    /// <summary>
+    /// Associates the tab page scroll viewer whose height this grid manages.
+    /// </summary>
+    /// <param name="pageScroll">The scroll viewer inside the active settings tab.</param>
     public void AttachPageScroll(ScrollViewer pageScroll) => _pageScroll = pageScroll;
 
+    /// <summary>
+    /// Associates the hosting content dialog used to derive available vertical space.
+    /// </summary>
+    /// <param name="dialog">The Advanced Options content dialog.</param>
     public void AttachHostDialog(ContentDialog dialog) => _hostDialog = dialog;
 
+    /// <summary>
+    /// Re-applies the last resolved scroll height to the attached page scroll viewer.
+    /// </summary>
     public void ApplyScrollConstraintsToCurrentPage() => ApplyScrollHeight(_resolvedPageHeight);
 
+    /// <summary>
+    /// Measures the grid with a resolved page height and propagates constraints to the scroll viewer.
+    /// </summary>
+    /// <param name="availableSize">The available size proposed by the parent.</param>
+    /// <returns>The desired size of the grid.</returns>
     protected override Size MeasureOverride(Size availableSize)
     {
         _resolvedPageHeight = ResolvePageHeight(availableSize);
@@ -30,6 +46,11 @@ internal sealed class SettingsDialogShellGrid : Grid
         return base.MeasureOverride(constraint);
     }
 
+    /// <summary>
+    /// Arranges the grid and re-resolves page height using final size and dialog chrome.
+    /// </summary>
+    /// <param name="finalSize">The final size allocated by the parent.</param>
+    /// <returns>The actual size used by the grid.</returns>
     protected override Size ArrangeOverride(Size finalSize)
     {
         _resolvedPageHeight = ResolvePageHeightForArrange(finalSize);
@@ -37,6 +58,11 @@ internal sealed class SettingsDialogShellGrid : Grid
         return base.ArrangeOverride(new Size(finalSize.Width, _resolvedPageHeight));
     }
 
+    /// <summary>
+    /// Resolves page height during measure from the available height constraint.
+    /// </summary>
+    /// <param name="availableSize">The available size proposed by the parent.</param>
+    /// <returns>The page height clamped to <see cref="SettingsLayoutHelper.PageMaxHeight"/>.</returns>
     private static double ResolvePageHeight(Size availableSize)
     {
         double preferred = SettingsLayoutHelper.PageMaxHeight;
@@ -49,6 +75,11 @@ internal sealed class SettingsDialogShellGrid : Grid
         return preferred;
     }
 
+    /// <summary>
+    /// Resolves page height during arrange, falling back to dialog or window chrome estimates.
+    /// </summary>
+    /// <param name="finalSize">The final size allocated by the parent.</param>
+    /// <returns>The page height clamped between 160 and <see cref="SettingsLayoutHelper.PageMaxHeight"/>.</returns>
     private double ResolvePageHeightForArrange(Size finalSize)
     {
         double preferred = SettingsLayoutHelper.PageMaxHeight;
@@ -58,6 +89,7 @@ internal sealed class SettingsDialogShellGrid : Grid
             return Math.Min(preferred, finalSize.Height);
         }
 
+        // Estimate from the hosting dialog's actual height minus title/button chrome.
         if (_hostDialog is not null && _hostDialog.ActualHeight > 0)
         {
             const double dialogChrome = 128;
@@ -68,6 +100,7 @@ internal sealed class SettingsDialogShellGrid : Grid
             }
         }
 
+        // Fall back to the dialog XAML root window height minus reserved chrome.
         var root = App.DialogXamlRoot;
         if (root is not null)
         {
@@ -82,6 +115,10 @@ internal sealed class SettingsDialogShellGrid : Grid
         return preferred;
     }
 
+    /// <summary>
+    /// Applies the resolved page height to this grid and the attached scroll viewer.
+    /// </summary>
+    /// <param name="pageHeight">The target page height in device-independent pixels.</param>
     private void ApplyScrollHeight(double pageHeight)
     {
         Height = pageHeight;

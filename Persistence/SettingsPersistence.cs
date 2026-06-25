@@ -4,10 +4,20 @@ using SameGame.UI;
 
 namespace SameGame.Persistence;
 
+/// <summary>
+/// Loads and saves game settings and window bounds to a JSON file in local app data.
+/// </summary>
 public static class SettingsPersistence
 {
     private const string FileName = "settings.json";
 
+    /// <summary>
+    /// Loads persisted game settings from disk.
+    /// </summary>
+    /// <returns>
+    /// The stored <see cref="GameSettings"/>, or default settings when the file is missing,
+    /// invalid, or cannot be read.
+    /// </returns>
     public static GameSettings Load()
     {
         try
@@ -28,6 +38,10 @@ public static class SettingsPersistence
         }
     }
 
+    /// <summary>
+    /// Persists the current game settings to disk.
+    /// </summary>
+    /// <param name="settings">The settings snapshot to save.</param>
     public static void Save(GameSettings settings)
     {
         try
@@ -43,6 +57,13 @@ public static class SettingsPersistence
         }
     }
 
+    /// <summary>
+    /// Loads persisted main-window bounds from the settings file.
+    /// </summary>
+    /// <returns>
+    /// The stored window position and size, or <see langword="null"/> when bounds are missing,
+    /// invalid, or cannot be read.
+    /// </returns>
     public static WindowBounds? LoadWindowBounds()
     {
         try
@@ -68,6 +89,13 @@ public static class SettingsPersistence
         }
     }
 
+    /// <summary>
+    /// Updates and persists the main-window bounds while preserving other settings.
+    /// </summary>
+    /// <param name="x">The window left position in pixels.</param>
+    /// <param name="y">The window top position in pixels.</param>
+    /// <param name="width">The window width in pixels.</param>
+    /// <param name="height">The window height in pixels.</param>
     public static void SaveWindowBounds(int x, int y, int width, int height)
     {
         var settings = Load();
@@ -91,6 +119,9 @@ public static class SettingsPersistence
         }
     }
 
+    /// <summary>
+    /// Deletes the persisted settings file, if it exists.
+    /// </summary>
     public static void ClearAll()
     {
         try
@@ -107,12 +138,30 @@ public static class SettingsPersistence
         }
     }
 
+    /// <summary>
+    /// Gets the folder path used for settings persistence.
+    /// </summary>
+    /// <returns>The absolute path to the SameGame app-data folder.</returns>
     private static string GetFolderPath() => AppDataPaths.GetAppFolder();
 
+    /// <summary>
+    /// Gets the full path to the settings JSON file.
+    /// </summary>
+    /// <returns>The absolute path to <c>settings.json</c>.</returns>
     private static string GetFilePath() => AppDataPaths.GetFilePath(FileName);
 
+    /// <summary>
+    /// Represents the persisted position and size of the main application window.
+    /// </summary>
+    /// <param name="X">The window left position in pixels.</param>
+    /// <param name="Y">The window top position in pixels.</param>
+    /// <param name="Width">The window width in pixels.</param>
+    /// <param name="Height">The window height in pixels.</param>
     public readonly record struct WindowBounds(int X, int Y, int Width, int Height);
 
+    /// <summary>
+    /// JSON-serializable snapshot of persisted game settings and optional window bounds.
+    /// </summary>
     private sealed record SettingsDto
     {
         public string? BoardSizePreset { get; init; }
@@ -138,6 +187,11 @@ public static class SettingsPersistence
         public int? WindowWidth { get; init; }
         public int? WindowHeight { get; init; }
 
+        /// <summary>
+        /// Creates a DTO from the current in-memory game settings.
+        /// </summary>
+        /// <param name="settings">The settings instance to serialize.</param>
+        /// <returns>A DTO containing all persistable setting values.</returns>
         public static SettingsDto FromSettings(GameSettings settings)
         {
             var colors = settings.TileColors();
@@ -164,9 +218,18 @@ public static class SettingsPersistence
             };
         }
 
+        /// <summary>
+        /// Reconstructs game settings from persisted DTO values.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="GameSettings"/> instance with fields populated from any non-null
+        /// or non-empty DTO members.
+        /// </returns>
         public GameSettings ToSettings()
         {
             var settings = new GameSettings();
+
+            // Board layout and tile appearance.
             if (!string.IsNullOrEmpty(BoardSizePreset))
             {
                 settings.BoardSizePresetValue = Enum.Parse<GameSettings.BoardSizePreset>(BoardSizePreset);
@@ -200,6 +263,7 @@ public static class SettingsPersistence
                 }
             }
 
+            // Visual theme and background.
             if (!string.IsNullOrEmpty(Skin))
             {
                 settings.SkinValue = GameSettings.ParseSkin(Skin);
@@ -215,6 +279,7 @@ public static class SettingsPersistence
                 settings.BackgroundValue = Enum.Parse<GameSettings.Background>(Background);
             }
 
+            // Timer options.
             if (TimerEnabled.HasValue)
             {
                 settings.TimerEnabled = TimerEnabled.Value;
@@ -225,6 +290,7 @@ public static class SettingsPersistence
                 settings.TimerSeconds = TimerSeconds.Value;
             }
 
+            // Audio settings.
             if (SoundEnabled.HasValue)
             {
                 settings.SoundEnabled = SoundEnabled.Value;
@@ -245,6 +311,7 @@ public static class SettingsPersistence
                 settings.BackgroundMusicVolume = BackgroundMusicVolume.Value;
             }
 
+            // Localization and board generation.
             if (!string.IsNullOrEmpty(LanguageCode))
             {
                 settings.LanguageCode = LanguageCode;

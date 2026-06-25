@@ -11,8 +11,14 @@ using SameGame.UI;
 
 namespace SameGame.Dialogs;
 
+/// <summary>
+/// Displays the advanced settings dialog with appearance, gameplay, and sound configuration pages.
+/// </summary>
 public sealed class AdvancedOptionsDialog
 {
+    /// <summary>
+    /// Navigation index for the gameplay (board) settings tab.
+    /// </summary>
     public const int TabGameplay = 1;
     private const double ShellWidth = SettingsLayoutHelper.DialogShellWidth;
 
@@ -35,8 +41,18 @@ public sealed class AdvancedOptionsDialog
     private StackPanel? _tilePreviewRow;
     private SettingsDialogShellGrid? _shell;
 
+    /// <summary>
+    /// Gets the saved settings when the dialog is confirmed; otherwise <c>null</c>.
+    /// </summary>
     public GameSettings? ResultSettings { get; private set; }
 
+    /// <summary>
+    /// Initializes a new advanced options dialog from the current game settings.
+    /// </summary>
+    /// <param name="settings">The settings to edit; a working copy is created internally.</param>
+    /// <param name="gameHasScore">Whether the current game has a non-zero score (reserved for future use).</param>
+    /// <param name="soundManager">The sound manager used for live preview of audio settings.</param>
+    /// <param name="initialSection">The zero-based section index to show when the dialog opens.</param>
     public AdvancedOptionsDialog(GameSettings settings, bool gameHasScore, SoundManager soundManager, int initialSection = 0)
     {
         _workingCopy = (GameSettings)settings.Clone();
@@ -46,6 +62,10 @@ public sealed class AdvancedOptionsDialog
         _initialSection = initialSection;
     }
 
+    /// <summary>
+    /// Shows the advanced options dialog and returns whether the user saved changes.
+    /// </summary>
+    /// <returns><c>true</c> if the user clicked Save; otherwise <c>false</c>.</returns>
     public async Task<bool> ShowAsync()
     {
         var shell = BuildShell();
@@ -71,6 +91,7 @@ public sealed class AdvancedOptionsDialog
             _shell?.InvalidateArrange();
         }
 
+        // Re-layout the shell when the dialog or main window resizes
         dialog.SizeChanged += OnLayoutChanged;
         var layoutHost = App.MainWindowContent.Content as FrameworkElement;
         if (layoutHost is not null)
@@ -98,8 +119,13 @@ public sealed class AdvancedOptionsDialog
         return true;
     }
 
+    /// <summary>
+    /// Builds the two-column dialog shell with navigation list and page scroll viewer.
+    /// </summary>
+    /// <returns>The configured settings dialog shell grid.</returns>
     private SettingsDialogShellGrid BuildShell()
     {
+        // Left navigation list for settings sections
         _navList = new ListView
         {
             Width = SettingsLayoutHelper.NavColumnWidth,
@@ -121,6 +147,7 @@ public sealed class AdvancedOptionsDialog
             }
         };
 
+        // Two-column grid: nav border | page scroll
         var grid = new SettingsDialogShellGrid
         {
             Width = ShellWidth,
@@ -155,6 +182,10 @@ public sealed class AdvancedOptionsDialog
         return grid;
     }
 
+    /// <summary>
+    /// Switches the visible settings page to the section at the given index.
+    /// </summary>
+    /// <param name="section">The zero-based section index.</param>
     private void ShowSection(int section)
     {
         _pageScroll!.Content = section switch
@@ -168,8 +199,13 @@ public sealed class AdvancedOptionsDialog
         _shell?.InvalidateMeasure();
     }
 
+    /// <summary>
+    /// Builds the appearance settings page with theme, colors, animations, and language controls.
+    /// </summary>
+    /// <returns>The appearance settings page content.</returns>
     private UIElement BuildAppearancePage()
     {
+        // Theme, background, and skin selectors
         var themeBox = CreateEnumComboBox<GameSettings.UiTheme>(Messages.Get("advanced.label.uiTheme"), _workingCopy.UiThemeValue);
         themeBox.SelectionChanged += (_, _) => _workingCopy.UiThemeValue = (GameSettings.UiTheme)themeBox.SelectedIndex;
 
@@ -189,6 +225,7 @@ public sealed class AdvancedOptionsDialog
         };
         animations.Toggled += (_, _) => _workingCopy.AnimationsEnabled = animations.IsOn;
 
+        // Language selector populated from available locales
         var languageBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
         var languageCodes = LocaleCatalog.AvailableLanguages().ToList();
         foreach (var (_, label) in languageCodes)
@@ -205,6 +242,7 @@ public sealed class AdvancedOptionsDialog
             }
         };
 
+        // Tile color count and interactive preview row
         var colorsBox = new NumberBox
         {
             Header = Messages.Get("advanced.label.numColors"),
@@ -247,6 +285,10 @@ public sealed class AdvancedOptionsDialog
             SettingsLayoutHelper.CreateSection(Messages.Get("advanced.label.language"), languageBox));
     }
 
+    /// <summary>
+    /// Builds the gameplay settings page with board size, difficulty, and timer controls.
+    /// </summary>
+    /// <returns>The gameplay settings page content.</returns>
     private UIElement BuildBoardPage()
     {
         var sizeBox = CreateEnumComboBox<GameSettings.BoardSizePreset>(null, _workingCopy.BoardSizePresetValue);
@@ -281,6 +323,7 @@ public sealed class AdvancedOptionsDialog
             Messages.Get("advanced.label.difficulty"),
             _workingCopy.GenerationDifficultyValue);
 
+        // Randomness slider with live percentage label
         var randomness = new Slider
         {
             Header = Messages.Get("advanced.label.randomness"),
@@ -299,6 +342,7 @@ public sealed class AdvancedOptionsDialog
             randomnessLabel.Text = Messages.Format("advanced.label.volumePercent", _workingCopy.Randomness);
         };
 
+        // Timer toggle and duration input
         var timerEnabled = new ToggleSwitch
         {
             IsOn = _workingCopy.TimerEnabled
@@ -331,6 +375,7 @@ public sealed class AdvancedOptionsDialog
             UpdateSizeFields();
         }
 
+        // Wire control change handlers to working copy
         sizeBox.SelectionChanged += (_, _) =>
         {
             _workingCopy.BoardSizePresetValue = (GameSettings.BoardSizePreset)sizeBox.SelectedIndex;
@@ -376,6 +421,10 @@ public sealed class AdvancedOptionsDialog
             SettingsLayoutHelper.CreateSection(Messages.Get("advanced.section.timer"), timerEnabled, timerSeconds));
     }
 
+    /// <summary>
+    /// Populates the tile color preview row with one preview host per active color.
+    /// </summary>
+    /// <param name="row">The horizontal stack panel that holds color preview hosts.</param>
     private void PopulateTilePreviewRow(StackPanel row)
     {
         row.Children.Clear();
@@ -385,6 +434,11 @@ public sealed class AdvancedOptionsDialog
         }
     }
 
+    /// <summary>
+    /// Creates a clickable border host that displays a tile color preview at the given index.
+    /// </summary>
+    /// <param name="index">The zero-based color index.</param>
+    /// <returns>A bordered preview host wired to open the color picker.</returns>
     private Border CreateColorPreviewHost(int index)
     {
         var host = new Border
@@ -402,6 +456,11 @@ public sealed class AdvancedOptionsDialog
         return host;
     }
 
+    /// <summary>
+    /// Creates a canvas control that renders a single tile preview for the given color index.
+    /// </summary>
+    /// <param name="index">The zero-based color index to preview.</param>
+    /// <returns>A canvas control that draws the tile preview.</returns>
     private CanvasControl CreatePreviewCanvas(int index)
     {
         const double previewSize = 40;
@@ -421,6 +480,10 @@ public sealed class AdvancedOptionsDialog
         return canvas;
     }
 
+    /// <summary>
+    /// Refreshes the preview canvas for a single color index in the preview row.
+    /// </summary>
+    /// <param name="index">The zero-based color index to update.</param>
     private void UpdateColorPreviewHost(int index)
     {
         if (_tilePreviewRow is null)
@@ -438,6 +501,9 @@ public sealed class AdvancedOptionsDialog
         }
     }
 
+    /// <summary>
+    /// Rebuilds all tile color previews when the color count or palette changes.
+    /// </summary>
     private void RebuildTilePreviewRow()
     {
         if (_tilePreviewRow is null)
@@ -448,14 +514,24 @@ public sealed class AdvancedOptionsDialog
         PopulateTilePreviewRow(_tilePreviewRow);
     }
 
+    /// <summary>
+    /// Applies a picked color to the working copy and refreshes its preview host.
+    /// </summary>
+    /// <param name="index">The zero-based color index to update.</param>
+    /// <param name="color">The selected color value.</param>
     private void ApplyPickerColor(int index, Windows.UI.Color color)
     {
         _workingCopy.SetColorAt(index, color);
         UpdateColorPreviewHost(index);
     }
 
+    /// <summary>
+    /// Builds the sound settings page with effects and optional background music controls.
+    /// </summary>
+    /// <returns>The sound settings page content.</returns>
     private UIElement BuildSoundPage()
     {
+        // Sound effects section
         _soundEnabledBox = new ToggleSwitch
         {
             IsOn = _workingCopy.SoundEnabled
@@ -502,6 +578,7 @@ public sealed class AdvancedOptionsDialog
             return SettingsLayoutHelper.CreatePage(effectsSection);
         }
 
+        // Background music section (when available)
         _backgroundMusicEnabledBox = new ToggleSwitch
         {
             IsOn = _workingCopy.BackgroundMusicEnabled
@@ -544,6 +621,13 @@ public sealed class AdvancedOptionsDialog
         return SettingsLayoutHelper.CreatePage(effectsSection, musicSection);
     }
 
+    /// <summary>
+    /// Creates a combo box populated with localized labels for an enum type.
+    /// </summary>
+    /// <typeparam name="T">The enum type to populate.</typeparam>
+    /// <param name="header">The optional combo box header text.</param>
+    /// <param name="selected">The initially selected enum value.</param>
+    /// <returns>A configured combo box bound to enum values.</returns>
     private static ComboBox CreateEnumComboBox<T>(string? header, T selected) where T : struct, Enum
     {
         var box = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -561,6 +645,10 @@ public sealed class AdvancedOptionsDialog
         return box;
     }
 
+    /// <summary>
+    /// Shows a flyout color picker anchored to the preview host for the given color index.
+    /// </summary>
+    /// <param name="index">The zero-based color index to edit.</param>
     private void ShowColorPickerFlyout(int index)
     {
         if (_tilePreviewRow is null)
@@ -606,6 +694,9 @@ public sealed class AdvancedOptionsDialog
         flyout.ShowAt(host);
     }
 
+    /// <summary>
+    /// Enables or disables sound-effects volume controls based on the sound-enabled toggle.
+    /// </summary>
     private void UpdateEffectsControlsEnabled()
     {
         if (_soundEffectsVolumeSlider is not null && _soundEnabledBox is not null)
@@ -614,6 +705,9 @@ public sealed class AdvancedOptionsDialog
         }
     }
 
+    /// <summary>
+    /// Enables or disables background music volume controls based on the music-enabled toggle.
+    /// </summary>
     private void UpdateMusicControlsEnabled()
     {
         if (_backgroundMusicVolumeSlider is not null && _backgroundMusicEnabledBox is not null)
@@ -622,6 +716,9 @@ public sealed class AdvancedOptionsDialog
         }
     }
 
+    /// <summary>
+    /// Applies the current background music volume to the sound manager for live preview.
+    /// </summary>
     private void ApplyLiveBackgroundMusicVolume()
     {
         if (_backgroundMusicEnabledBox?.IsOn == true && _backgroundMusicVolumeSlider is not null)
@@ -630,6 +727,10 @@ public sealed class AdvancedOptionsDialog
         }
     }
 
+    /// <summary>
+    /// Applies the current sound settings from dialog controls to the sound manager.
+    /// </summary>
+    /// <param name="soundEnabled">The sound-enabled toggle whose state drives configuration.</param>
     private void ApplyLiveSoundSettings(ToggleSwitch soundEnabled)
     {
         _soundManager.Configure(
@@ -641,6 +742,11 @@ public sealed class AdvancedOptionsDialog
                 : _workingCopy.BackgroundMusicVolume);
     }
 
+    /// <summary>
+    /// Invokes a preview callback when the user finishes interacting with a slider.
+    /// </summary>
+    /// <param name="slider">The slider to monitor for pointer release.</param>
+    /// <param name="onRelease">The action to invoke after interaction ends.</param>
     private static void AttachSliderReleasePreview(Slider slider, Action onRelease)
     {
         bool interacting = false;
@@ -701,6 +807,12 @@ public sealed class AdvancedOptionsDialog
             handledEventsToo: true);
     }
 
+    /// <summary>
+    /// Finds the first descendant of the given type in a visual tree subtree.
+    /// </summary>
+    /// <typeparam name="T">The descendant type to search for.</typeparam>
+    /// <param name="root">The root dependency object to search from.</param>
+    /// <returns>The first matching descendant, or <c>null</c> if none is found.</returns>
     private static T? FindDescendant<T>(DependencyObject root) where T : DependencyObject
     {
         int childCount = VisualTreeHelper.GetChildrenCount(root);
@@ -722,6 +834,9 @@ public sealed class AdvancedOptionsDialog
         return null;
     }
 
+    /// <summary>
+    /// Previews a sound effect at the current effects volume when the slider is released.
+    /// </summary>
     private void PreviewSoundEffectsVolume()
     {
         if (_soundEffectsVolumeSlider is null)
@@ -745,6 +860,9 @@ public sealed class AdvancedOptionsDialog
         _soundManager.PreviewEffect("remove1", volume);
     }
 
+    /// <summary>
+    /// Restores the sound manager configuration to the original settings before editing.
+    /// </summary>
     private void RestoreSoundSettings()
     {
         _soundManager.Configure(

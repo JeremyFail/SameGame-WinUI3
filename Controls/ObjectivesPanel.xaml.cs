@@ -7,8 +7,14 @@ using SameGame.UI;
 
 namespace SameGame.Controls;
 
+/// <summary>
+/// Side panel that lists remaining tile counts per color for the current board state.
+/// </summary>
 public sealed partial class ObjectivesPanel : UserControl
 {
+    /// <summary>
+    /// Initializes the objectives panel with localized header text and off-screen slide transform.
+    /// </summary>
     public ObjectivesPanel()
     {
         InitializeComponent();
@@ -16,6 +22,10 @@ public sealed partial class ObjectivesPanel : UserControl
         RenderTransform = new TranslateTransform { X = 148 };
     }
 
+    /// <summary>
+    /// Slides the panel into view from the right with an ease-out animation.
+    /// </summary>
+    /// <returns>A task that completes when the show animation finishes.</returns>
     public async Task ShowAnimatedAsync()
     {
         Visibility = Visibility.Visible;
@@ -40,6 +50,10 @@ public sealed partial class ObjectivesPanel : UserControl
         }
     }
 
+    /// <summary>
+    /// Slides the panel off-screen to the right, then collapses it.
+    /// </summary>
+    /// <returns>A task that completes when the hide animation finishes.</returns>
     public async Task HideAnimatedAsync()
     {
         if (RenderTransform is TranslateTransform transform)
@@ -65,6 +79,11 @@ public sealed partial class ObjectivesPanel : UserControl
         Visibility = Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Rebuilds objective rows from the current board color counts and active palette size.
+    /// </summary>
+    /// <param name="board">Board whose per-color tile counts are displayed.</param>
+    /// <param name="settings">Game settings providing the number of active colors.</param>
     public void Update(Board board, GameSettings settings)
     {
         RowsPanel.Children.Clear();
@@ -76,6 +95,9 @@ public sealed partial class ObjectivesPanel : UserControl
         }
     }
 
+    /// <summary>
+    /// Applies the current application theme to the panel background, border, and all row borders.
+    /// </summary>
     public void RefreshTheme()
     {
         ElementTheme theme = ThemeResources.ResolveAppTheme();
@@ -88,16 +110,33 @@ public sealed partial class ObjectivesPanel : UserControl
         }
     }
 
+    /// <summary>
+    /// Creates the background brush used for objective rows in the given theme.
+    /// </summary>
+    /// <param name="theme">Light or dark element theme.</param>
+    /// <returns>A solid brush matching the theme palette.</returns>
     private static Microsoft.UI.Xaml.Media.SolidColorBrush CreateRowBrush(ElementTheme theme) =>
         theme == ElementTheme.Dark
             ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x2D, 0x2D, 0x2D))
             : new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 0xFA, 0xFA, 0xFA));
 
+    /// <summary>
+    /// Creates the border brush used for objective rows in the given theme.
+    /// </summary>
+    /// <param name="theme">Light or dark element theme.</param>
+    /// <returns>A solid brush matching the theme palette.</returns>
     private static Microsoft.UI.Xaml.Media.SolidColorBrush CreateRowBorderBrush(ElementTheme theme) =>
         theme == ElementTheme.Dark
             ? new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 0x3F, 0x3F, 0x3F))
             : new Microsoft.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(255, 0xE0, 0xE0, 0xE0));
 
+    /// <summary>
+    /// Builds a single objective row with a tile preview and remaining count label.
+    /// </summary>
+    /// <param name="colorIndex">Zero-based color index for the preview tile.</param>
+    /// <param name="count">Remaining tile count for that color.</param>
+    /// <param name="settings">Game settings used to render the preview tile.</param>
+    /// <returns>A bordered grid row ready to add to the objectives list.</returns>
     private static Border CreateRow(int colorIndex, int count, GameSettings settings)
     {
         var preview = new TilePreviewControl

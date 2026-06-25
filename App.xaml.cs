@@ -21,13 +21,22 @@ public partial class App : Application
 {
     private Window? _window;
 
+    /// <summary>
+    /// Gets the main application window used as the host for dialogs and navigation.
+    /// </summary>
     public static Window MainWindowContent { get; private set; } = null!;
 
+    /// <summary>
+    /// Gets the <see cref="XamlRoot"/> of the main window content, used to anchor modal dialogs.
+    /// </summary>
     public static XamlRoot? DialogXamlRoot =>
         (MainWindowContent.Content as FrameworkElement)?.XamlRoot;
 
+    /// <summary>
+    /// Gets or sets the current UI theme applied across application windows.
+    /// </summary>
     public static GameSettings.UiTheme CurrentUiTheme { get; set; } = GameSettings.UiTheme.System;
-    
+
     /// <summary>
     /// Initializes the singleton application object.  This is the first line of authored code
     /// executed, and as such is the logical equivalent of main() or WinMain().

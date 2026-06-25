@@ -8,6 +8,9 @@ using SameGame.UI;
 
 namespace SameGame.Views;
 
+/// <summary>
+/// A secondary window that lists persisted high scores in a tabular layout.
+/// </summary>
 public sealed class HighScoresWindow : Window
 {
     private const int DefaultWidth = 960;
@@ -23,6 +26,9 @@ public sealed class HighScoresWindow : Window
         Margin = new Thickness(16, 8, 16, 16)
     };
 
+    /// <summary>
+    /// Initializes the high-scores window with default size, table layout, and application theme.
+    /// </summary>
     public HighScoresWindow()
     {
         Title = Messages.Get("highScores.title");
@@ -66,11 +72,17 @@ public sealed class HighScoresWindow : Window
         WindowHelper.ApplyWindowTheme(this, App.CurrentUiTheme);
     }
 
+    /// <summary>
+    /// Reapplies the current application UI theme to this window.
+    /// </summary>
     public void ApplyAppTheme()
     {
         WindowHelper.ApplyWindowTheme(this, App.CurrentUiTheme);
     }
 
+    /// <summary>
+    /// Reloads high scores from storage and rebuilds the table rows.
+    /// </summary>
     public void Refresh()
     {
         var entries = HighScoreStorage.Load();
@@ -88,6 +100,10 @@ public sealed class HighScoresWindow : Window
         _emptyLabel.Visibility = entries.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Creates the column header row for the high-scores table.
+    /// </summary>
+    /// <returns>A bordered grid containing header labels.</returns>
     private static UIElement CreateTableHeader()
     {
         var grid = CreateRowGrid();
@@ -109,6 +125,12 @@ public sealed class HighScoresWindow : Window
         };
     }
 
+    /// <summary>
+    /// Creates a data row for a single high-score entry.
+    /// </summary>
+    /// <param name="rank">The display rank of the entry.</param>
+    /// <param name="entry">The high-score entry to display.</param>
+    /// <returns>A grid populated with entry values.</returns>
     private static Grid CreateDataRow(int rank, HighScoreEntry entry)
     {
         var grid = CreateRowGrid();
@@ -122,6 +144,10 @@ public sealed class HighScoresWindow : Window
         return grid;
     }
 
+    /// <summary>
+    /// Creates an empty grid with the standard high-scores column layout.
+    /// </summary>
+    /// <returns>A configured column grid for a table row.</returns>
     private static Grid CreateRowGrid()
     {
         var grid = new Grid
@@ -139,6 +165,12 @@ public sealed class HighScoresWindow : Window
         return grid;
     }
 
+    /// <summary>
+    /// Adds a semibold header label to the specified column of a row grid.
+    /// </summary>
+    /// <param name="grid">The row grid to populate.</param>
+    /// <param name="column">The zero-based column index.</param>
+    /// <param name="text">The header label text.</param>
     private static void AddHeaderCell(Grid grid, int column, string text)
     {
         var label = new TextBlock
@@ -151,6 +183,15 @@ public sealed class HighScoresWindow : Window
         grid.Children.Add(label);
     }
 
+    /// <summary>
+    /// Adds a data label to the specified column of a row grid.
+    /// </summary>
+    /// <param name="grid">The row grid to populate.</param>
+    /// <param name="column">The zero-based column index.</param>
+    /// <param name="text">The cell text.</param>
+    /// <param name="rightAlign">Whether to right-align the cell text.</param>
+    /// <param name="trim">Whether to apply character ellipsis trimming.</param>
+    /// <param name="dim">Whether to reduce the cell opacity for secondary text.</param>
     private static void AddDataCell(
         Grid grid,
         int column,

@@ -7,6 +7,9 @@ using Windows.Foundation;
 
 namespace SameGame.Controls;
 
+/// <summary>
+/// Renders a single tile preview using the current game skin and color palette.
+/// </summary>
 public sealed class TilePreviewControl : UserControl
 {
     private const double DefaultSize = 36;
@@ -15,6 +18,9 @@ public sealed class TilePreviewControl : UserControl
     private GameSettings? _settings;
     private int _colorIndex;
 
+    /// <summary>
+    /// Initializes a new tile preview control with a Win2D canvas child.
+    /// </summary>
     public TilePreviewControl()
     {
         _canvas = new CanvasControl();
@@ -24,6 +30,11 @@ public sealed class TilePreviewControl : UserControl
         SizeChanged += (_, _) => SyncCanvasSize();
     }
 
+    /// <summary>
+    /// Configures the preview from a cloned copy of the given settings and color index.
+    /// </summary>
+    /// <param name="settings">Game settings that define skin and palette.</param>
+    /// <param name="colorIndex">Zero-based tile color index to render.</param>
     public void Configure(GameSettings settings, int colorIndex)
     {
         _settings = (GameSettings)settings.Clone();
@@ -34,6 +45,8 @@ public sealed class TilePreviewControl : UserControl
     /// <summary>
     /// Binds to a live settings instance for immediate preview updates (e.g. Advanced Options).
     /// </summary>
+    /// <param name="settings">Shared game settings instance to read from on each draw.</param>
+    /// <param name="colorIndex">Zero-based tile color index to render.</param>
     public void Bind(GameSettings settings, int colorIndex)
     {
         _settings = settings;
@@ -41,8 +54,16 @@ public sealed class TilePreviewControl : UserControl
         InvalidateCanvas();
     }
 
+    /// <summary>
+    /// Requests a redraw of the preview canvas.
+    /// </summary>
     public void Refresh() => InvalidateCanvas();
 
+    /// <summary>
+    /// Measures the control at its explicit or default size and forwards measurement to the canvas.
+    /// </summary>
+    /// <param name="availableSize">Available layout space from the parent.</param>
+    /// <returns>The desired size of the preview control.</returns>
     protected override Size MeasureOverride(Size availableSize)
     {
         double width = double.IsNaN(Width) ? DefaultSize : Width;
@@ -52,12 +73,20 @@ public sealed class TilePreviewControl : UserControl
         return size;
     }
 
+    /// <summary>
+    /// Arranges the internal canvas to fill the allocated final size.
+    /// </summary>
+    /// <param name="finalSize">Final size allocated by the parent layout pass.</param>
+    /// <returns>The arranged size, equal to <paramref name="finalSize"/>.</returns>
     protected override Size ArrangeOverride(Size finalSize)
     {
         _canvas.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
         return finalSize;
     }
 
+    /// <summary>
+    /// Synchronizes the canvas pixel dimensions with the control's actual or declared size.
+    /// </summary>
     private void SyncCanvasSize()
     {
         double width = ActualWidth > 0 ? ActualWidth : (double.IsNaN(Width) ? DefaultSize : Width);
@@ -67,6 +96,9 @@ public sealed class TilePreviewControl : UserControl
         InvalidateCanvas();
     }
 
+    /// <summary>
+    /// Invalidates the canvas on the UI thread, marshaling when called from a background thread.
+    /// </summary>
     private void InvalidateCanvas()
     {
         if (DispatcherQueue.HasThreadAccess)
@@ -79,6 +111,11 @@ public sealed class TilePreviewControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Draws a single tile cell centered in the preview canvas using <see cref="TileRenderer"/>.
+    /// </summary>
+    /// <param name="sender">The canvas control being painted.</param>
+    /// <param name="args">Draw event arguments providing the drawing session.</param>
     private void OnDraw(CanvasControl sender, Microsoft.Graphics.Canvas.UI.Xaml.CanvasDrawEventArgs args)
     {
         if (_settings is null)

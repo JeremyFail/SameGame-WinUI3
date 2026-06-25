@@ -8,8 +8,16 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace SameGame.Dialogs;
 
+/// <summary>
+/// Displays a modal dialog for unhandled startup or fatal errors with copy and issue-reporting actions.
+/// </summary>
 public static class FatalErrorDialog
 {
+    /// <summary>
+    /// Shows a fatal error dialog describing the given exception and offering recovery actions.
+    /// </summary>
+    /// <param name="exception">The exception that caused the fatal error.</param>
+    /// <returns>A task that completes when the dialog is dismissed.</returns>
     public static async Task ShowAsync(Exception exception)
     {
         string errorText = CrashReportFormatter.Format(exception);
@@ -19,6 +27,7 @@ public static class FatalErrorDialog
             exceptionName = exception.GetType().FullName ?? "Exception";
         }
 
+        // Summary and exception type label
         var summary = new TextBlock
         {
             Text = Messages.Get("startupError.summary"),
@@ -48,6 +57,7 @@ public static class FatalErrorDialog
         issuesButton.Click += async (_, _) =>
             await BrowserHelper.OpenUrlAsync(BrowserHelper.IssuesUrl, App.DialogXamlRoot!);
 
+        // Collapsible technical details panel
         var detailsText = new TextBlock
         {
             Text = errorText,
@@ -148,6 +158,11 @@ public static class FatalErrorDialog
         await dialog.ShowAsync();
     }
 
+    /// <summary>
+    /// Creates a full-width action button with the given label text.
+    /// </summary>
+    /// <param name="text">The button label.</param>
+    /// <returns>A configured <see cref="Button"/> instance.</returns>
     private static Button CreateActionButton(string text)
     {
         return new Button
@@ -157,6 +172,11 @@ public static class FatalErrorDialog
         };
     }
 
+    /// <summary>
+    /// Creates a full-width accent-styled action button with the given label text.
+    /// </summary>
+    /// <param name="text">The button label.</param>
+    /// <returns>A configured accent <see cref="Button"/> instance.</returns>
     private static Button CreateAccentButton(string text)
     {
         var button = CreateActionButton(text);
@@ -169,6 +189,11 @@ public static class FatalErrorDialog
         return button;
     }
 
+    /// <summary>
+    /// Copies the given text to the system clipboard.
+    /// </summary>
+    /// <param name="text">The text to copy.</param>
+    /// <returns>A completed task.</returns>
     private static async Task CopyToClipboardAsync(string text)
     {
         var package = new DataPackage();

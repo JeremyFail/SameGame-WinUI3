@@ -28,13 +28,27 @@ public sealed class SoundManager
     private int _effectsVolume = 100;
     private int _backgroundMusicVolume = 50;
 
+    /// <summary>
+    /// Initializes a new sound manager and discovers available remove-tile effect variants.
+    /// </summary>
     public SoundManager()
     {
         _removeSoundNames = DiscoverNumberedVariants("remove");
     }
 
+    /// <summary>
+    /// Determines whether at least one background music track is available on disk.
+    /// </summary>
+    /// <returns><see langword="true"/> when background music assets exist; otherwise <see langword="false"/>.</returns>
     public static bool IsBackgroundMusicAvailable() => BackgroundMusicAvailable.Value;
 
+    /// <summary>
+    /// Applies sound-effect and background-music enable flags and volume levels.
+    /// </summary>
+    /// <param name="effectsEnabled">Whether sound effects should play.</param>
+    /// <param name="effectsVolume">Sound-effects volume from 0 to 100.</param>
+    /// <param name="backgroundMusicEnabled">Whether background music should play when assets exist.</param>
+    /// <param name="backgroundMusicVolume">Background-music volume from 0 to 100.</param>
     public void Configure(
         bool effectsEnabled,
         int effectsVolume,
@@ -48,6 +62,10 @@ public sealed class SoundManager
         UpdateBackgroundMusic();
     }
 
+    /// <summary>
+    /// Updates the volume of the currently playing background music track.
+    /// </summary>
+    /// <param name="volumePercent">Background-music volume from 0 to 100.</param>
     public void SetBackgroundMusicVolume(int volumePercent)
     {
         _backgroundMusicVolume = ClampVolume(volumePercent);
@@ -60,11 +78,19 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Plays a one-shot preview of a named sound effect at the given volume.
+    /// </summary>
+    /// <param name="baseName">The sound asset base name without extension.</param>
+    /// <param name="volumePercent">Preview volume from 0 to 100.</param>
     public void PreviewEffect(string baseName, int volumePercent)
     {
         PlayEffect(baseName, volumePercent);
     }
 
+    /// <summary>
+    /// Plays a random remove-tile sound effect when effects are enabled.
+    /// </summary>
     public void PlayRemove()
     {
         if (!_effectsEnabled)
@@ -81,6 +107,9 @@ public sealed class SoundManager
         PlayEffect(name, _effectsVolume);
     }
 
+    /// <summary>
+    /// Plays the game-over sound effect when effects are enabled.
+    /// </summary>
     public void PlayGameOver()
     {
         if (!_effectsEnabled)
@@ -91,11 +120,19 @@ public sealed class SoundManager
         PlayEffect("game-end", _effectsVolume);
     }
 
+    /// <summary>
+    /// Stops background music and releases playback resources.
+    /// </summary>
     public void Shutdown()
     {
         StopBackgroundMusic();
     }
 
+    /// <summary>
+    /// Creates, tracks, and plays a one-shot sound effect from a named asset.
+    /// </summary>
+    /// <param name="baseName">The sound asset base name without extension.</param>
+    /// <param name="volumePercent">Playback volume from 0 to 100.</param>
     private void PlayEffect(string baseName, int volumePercent)
     {
         if (!TryCreateMediaSource(baseName, out var source))
@@ -132,6 +169,9 @@ public sealed class SoundManager
         player.Play();
     }
 
+    /// <summary>
+    /// Starts, resumes, or stops background music based on the current enabled state.
+    /// </summary>
     private void UpdateBackgroundMusic()
     {
         if (!_backgroundMusicEnabled)
@@ -155,6 +195,10 @@ public sealed class SoundManager
         StartBackgroundTrack(PickBackgroundTrackName());
     }
 
+    /// <summary>
+    /// Stops any current background track and begins playback of the specified track.
+    /// </summary>
+    /// <param name="trackName">The background track asset base name without extension.</param>
     private void StartBackgroundTrack(string trackName)
     {
         lock (_backgroundLock)
@@ -186,6 +230,10 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Handles completion or failure of a background track and optionally starts the next track.
+    /// </summary>
+    /// <param name="epoch">The playback epoch that must still be current to continue the playlist.</param>
     private void OnBackgroundTrackEnded(int epoch)
     {
         bool playNext;
@@ -206,6 +254,9 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Stops background music playback under the background lock.
+    /// </summary>
     private void StopBackgroundMusic()
     {
         lock (_backgroundLock)
@@ -214,6 +265,9 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Disposes the active background player and invalidates in-flight playback callbacks.
+    /// </summary>
     private void StopBackgroundMusicInternal()
     {
         _backgroundPlaybackEpoch++;
@@ -224,6 +278,10 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Selects a background track name, avoiding immediate repetition when multiple tracks exist.
+    /// </summary>
+    /// <returns>The base name of the background track to play.</returns>
     private string PickBackgroundTrackName()
     {
         var tracks = BackgroundTrackNames.Value;
@@ -247,6 +305,12 @@ public sealed class SoundManager
         return name;
     }
 
+    /// <summary>
+    /// Resolves a media source for a sound asset from disk search paths or packaged content.
+    /// </summary>
+    /// <param name="baseName">The sound asset base name without extension.</param>
+    /// <param name="source">When this method returns, contains the resolved source if found.</param>
+    /// <returns><see langword="true"/> when a media source was created; otherwise <see langword="false"/>.</returns>
     private static bool TryCreateMediaSource(string baseName, out MediaSource? source)
     {
         source = null;
@@ -273,6 +337,11 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Collects numbered sound variant base names that exist for a given prefix.
+    /// </summary>
+    /// <param name="prefix">The shared prefix before the variant number (for example, <c>remove</c>).</param>
+    /// <returns>Ordered list of existing variant base names.</returns>
     private static List<string> DiscoverNumberedVariants(string prefix)
     {
         var names = new List<string>();
@@ -288,9 +357,18 @@ public sealed class SoundManager
         return names;
     }
 
+    /// <summary>
+    /// Discovers all available numbered background music tracks.
+    /// </summary>
+    /// <returns>Read-only list of background track base names.</returns>
     private static IReadOnlyList<string> DiscoverBackgroundTracks() =>
         DiscoverNumberedVariants("background");
 
+    /// <summary>
+    /// Determines whether an MP3 file exists for the given sound base name.
+    /// </summary>
+    /// <param name="baseName">The sound asset base name without extension.</param>
+    /// <returns><see langword="true"/> when the file exists in a search root; otherwise <see langword="false"/>.</returns>
     private static bool SoundFileExists(string baseName)
     {
         string fileName = baseName + ".mp3";
@@ -305,6 +383,10 @@ public sealed class SoundManager
         return false;
     }
 
+    /// <summary>
+    /// Yields filesystem directories searched for loose sound assets.
+    /// </summary>
+    /// <returns>Candidate sound root directories in search order.</returns>
     private static IEnumerable<string> GetSoundSearchRoots()
     {
         yield return Path.Combine(AppContext.BaseDirectory, "Assets", "sounds");
@@ -316,6 +398,10 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Attempts to resolve the packaged application's Assets/sounds directory.
+    /// </summary>
+    /// <returns>The absolute sounds directory path, or <see langword="null"/> when unavailable.</returns>
     private static string? TryGetPackageSoundRoot()
     {
         try
@@ -331,9 +417,19 @@ public sealed class SoundManager
         }
     }
 
+    /// <summary>
+    /// Clamps a volume percentage to the inclusive range 0 through 100.
+    /// </summary>
+    /// <param name="volume">The requested volume percentage.</param>
+    /// <returns>The clamped volume percentage.</returns>
     private static int ClampVolume(int volume) =>
         Math.Max(0, Math.Min(100, volume));
 
+    /// <summary>
+    /// Converts a volume percentage to a media player volume scale from 0.0 to 1.0.
+    /// </summary>
+    /// <param name="volumePercent">The volume percentage from 0 to 100.</param>
+    /// <returns>The scaled volume suitable for <see cref="MediaPlayer.Volume"/>.</returns>
     private static double VolumeScale(int volumePercent) =>
         ClampVolume(volumePercent) / 100.0;
 }

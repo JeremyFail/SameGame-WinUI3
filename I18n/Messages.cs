@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 
 namespace SameGame.I18n;
 
+/// <summary>
+/// Loads localized message strings from embedded property bundles and formats printf-style placeholders.
+/// </summary>
 public static class Messages
 {
     private static readonly Dictionary<string, string> Bundle = new();
@@ -18,6 +21,10 @@ public static class Messages
         SetLanguage("en");
     }
 
+    /// <summary>
+    /// Switches the active language and reloads the message bundle.
+    /// </summary>
+    /// <param name="code">The BCP 47-style language code to load; defaults to English when blank.</param>
     public static void SetLanguage(string code)
     {
         _languageCode = string.IsNullOrWhiteSpace(code) ? "en" : code;
@@ -31,12 +38,29 @@ public static class Messages
 
     public static string LanguageCode => _languageCode;
 
+    /// <summary>
+    /// Gets the localized string for a message key.
+    /// </summary>
+    /// <param name="key">The message key to look up.</param>
+    /// <returns>The localized value, or a placeholder of the form <c>!key!</c> when missing.</returns>
     public static string Get(string key) =>
         Bundle.TryGetValue(key, out var value) ? value : $"!{key}!";
 
+    /// <summary>
+    /// Gets a localized string and substitutes printf-style arguments.
+    /// </summary>
+    /// <param name="key">The message key to look up.</param>
+    /// <param name="args">Arguments referenced by the format string.</param>
+    /// <returns>The formatted localized message.</returns>
     public static string Format(string key, params object[] args) =>
         FormatPrintf(Get(key), args);
 
+    /// <summary>
+    /// Formats a printf-style string using positional or sequential argument placeholders.
+    /// </summary>
+    /// <param name="format">The format string containing <c>%</c> specifiers.</param>
+    /// <param name="args">Arguments referenced by the format string.</param>
+    /// <returns>The formatted string, or the original format when no arguments are supplied.</returns>
     internal static string FormatPrintf(string format, params object[] args)
     {
         if (args.Length == 0)
@@ -50,6 +74,7 @@ public static class Messages
 
         foreach (Match match in PrintfPattern.Matches(format))
         {
+            // Copy literal text before this placeholder.
             result.Append(format, lastIndex, match.Index - lastIndex);
             string specifier = match.Groups[3].Value;
             if (specifier == "%")
@@ -58,6 +83,7 @@ public static class Messages
             }
             else
             {
+                // Resolve positional (e.g. %2$s) or sequential argument index.
                 int argIndex = match.Groups[1].Success
                     ? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) - 1
                     : autoArg++;
@@ -74,6 +100,7 @@ public static class Messages
                 }
                 else if (specifier == "d")
                 {
+                    // Optional zero-padded width (e.g. %02d).
                     string width = match.Groups[2].Value;
                     if (width.Length > 0)
                     {
@@ -90,10 +117,15 @@ public static class Messages
             lastIndex = match.Index + match.Length;
         }
 
+        // Append any trailing literal text after the last placeholder.
         result.Append(format, lastIndex, format.Length - lastIndex);
         return result.ToString();
     }
 
+    /// <summary>
+    /// Loads key/value message pairs for a language from an embedded properties resource.
+    /// </summary>
+    /// <param name="code">The language code used to select the embedded bundle file.</param>
     private static void LoadBundle(string code)
     {
         var assembly = Assembly.GetExecutingAssembly();
@@ -109,6 +141,7 @@ public static class Messages
         while ((line = reader.ReadLine()) is not null)
         {
             line = line.Trim();
+            // Skip blank lines and comments.
             if (line.Length == 0 || line.StartsWith('#'))
             {
                 continue;
@@ -126,6 +159,11 @@ public static class Messages
         }
     }
 
+    /// <summary>
+    /// Expands common escape sequences used in property file values.
+    /// </summary>
+    /// <param name="value">The raw property value read from a bundle line.</param>
+    /// <returns>The unescaped display value.</returns>
     private static string Unescape(string value)
     {
         return value

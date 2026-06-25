@@ -27,11 +27,23 @@ public static class TileRenderer
         Color.FromArgb(255, 134, 96, 67)
     ];
 
+    /// <summary>
+    /// Draws a single board cell using the skin-specific renderer selected in <paramref name="settings"/>.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="colorIndex">The palette index of the tile color.</param>
+    /// <param name="settings">Game settings that supply skin and color information.</param>
+    /// <param name="highlighted">Whether the cell is currently selected or highlighted.</param>
+    /// <param name="spinDegrees">Optional Y-axis spin angle in degrees (used by the Gems skin).</param>
     public static void DrawCell(
         CanvasDrawingSession ds, float x, float y, float size, int colorIndex,
         GameSettings settings, bool highlighted, float spinDegrees = 0f)
     {
         var baseColor = settings.ColorAt(colorIndex);
+        // Dispatch to the skin-specific drawing routine.
         switch (settings.SkinValue)
         {
             case GameSettings.Skin.Marbles:
@@ -58,6 +70,16 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws a rounded gradient tile with a centered letter (Modern skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The base fill color of the tile.</param>
+    /// <param name="colorIndex">The palette index used to resolve the letter glyph.</param>
+    /// <param name="highlighted">Whether to draw a selection outline.</param>
     private static void DrawModernTile(
         CanvasDrawingSession ds, float x, float y, float size, Color baseColor, int colorIndex, bool highlighted)
     {
@@ -85,6 +107,13 @@ public static class TileRenderer
         DrawModernLetter(ds, new Windows.Foundation.Rect(left, top, w, h), size, colorIndex);
     }
 
+    /// <summary>
+    /// Draws the centered letter glyph on a Modern skin tile.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="rect">The inner bounds of the tile.</param>
+    /// <param name="size">The outer cell size used to scale the font.</param>
+    /// <param name="colorIndex">The palette index used to resolve the letter glyph.</param>
     private static void DrawModernLetter(CanvasDrawingSession ds, Windows.Foundation.Rect rect, float size, int colorIndex)
     {
         char letter = GameSettings.LetterForColorIndex(colorIndex);
@@ -98,6 +127,16 @@ public static class TileRenderer
         ds.DrawText(letter.ToString(), rect, Color.FromArgb(255, 255, 255, 255), format);
     }
 
+    /// <summary>
+    /// Draws a beveled letter tile with a 3-D frame (Classic skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The inner fill color of the tile.</param>
+    /// <param name="colorIndex">The palette index used to resolve the letter glyph.</param>
+    /// <param name="highlighted">Whether to draw a selection outline.</param>
     private static void DrawLetterTile(
         CanvasDrawingSession ds, float x, float y, float size, Color baseColor, int colorIndex, bool highlighted)
     {
@@ -105,6 +144,7 @@ public static class TileRenderer
 
         ds.FillRectangle(x, y, size, size, FrameMid);
 
+        // Light bevel edges (top and left).
         ds.DrawLine(x, y, x + size - 1, y, FrameLight);
         ds.DrawLine(x, y, x, y + size - 1, FrameLight);
         if (bevel > 1)
@@ -113,6 +153,7 @@ public static class TileRenderer
             ds.DrawLine(x + 1, y + 1, x + 1, y + size - 2, FrameLight);
         }
 
+        // Dark bevel edges (bottom and right).
         ds.DrawLine(x, y + size - 1, x + size - 1, y + size - 1, FrameDark);
         ds.DrawLine(x + size - 1, y, x + size - 1, y + size - 1, FrameDark);
         if (bevel > 1)
@@ -144,6 +185,15 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws a marble sphere inside the cell bounds (Marbles skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The base color of the marble.</param>
+    /// <param name="highlighted">Whether to draw a selection ring.</param>
     private static void DrawMarbleCell(CanvasDrawingSession ds, float x, float y, float size, Color baseColor, bool highlighted)
     {
         float inset = Math.Max(1, size / 12f);
@@ -157,6 +207,14 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws a radial-gradient marble sphere at the given position and size.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the marble in pixels.</param>
+    /// <param name="y">The top edge of the marble in pixels.</param>
+    /// <param name="size">The diameter of the marble in pixels.</param>
+    /// <param name="baseColor">The base color of the marble.</param>
     private static void DrawMarble(CanvasDrawingSession ds, float x, float y, float size, Color baseColor)
     {
         float cx = x + size / 2f;
@@ -172,6 +230,16 @@ public static class TileRenderer
         ds.FillEllipse(cx, cy, size / 2f, size / 2f, brush);
     }
 
+    /// <summary>
+    /// Draws a Minecraft-style block tile with texture detail (Blockcraft skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="userTint">The user-selected tint color for the block.</param>
+    /// <param name="colorIndex">The palette index that selects the block type texture.</param>
+    /// <param name="highlighted">Whether to draw a selection outline.</param>
     private static void DrawBlockcraft(CanvasDrawingSession ds, float x, float y, float size, Color userTint, int colorIndex, bool highlighted)
     {
         int inset = Math.Max(1, (int)(size / 18));
@@ -184,6 +252,7 @@ public static class TileRenderer
         ds.FillRectangle(bx, by, bw, bh, blockColor);
         DrawBlockcraftFaceShading(ds, bx, by, bw, bh, blockColor);
 
+        // Pick block texture by color index.
         switch (colorIndex % 6)
         {
             case 0: DrawLapisBlock(ds, bx, by, bw, bh, blockColor); break;
@@ -201,6 +270,15 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws beveled edge shading on a Blockcraft block face.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawBlockcraftFaceShading(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         int edge = Math.Max(1, (int)(w / 10));
@@ -210,6 +288,15 @@ public static class TileRenderer
         ds.FillRectangle(x, y + h - edge, w, edge, Blend(baseColor, Color.FromArgb(255, 0, 0, 0), 0.28f));
     }
 
+    /// <summary>
+    /// Draws lapis-lazuli block speckle texture detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawLapisBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         int cell = Math.Max(2, (int)(w / 8));
@@ -230,6 +317,15 @@ public static class TileRenderer
         ds.FillRectangle(x + w * 2 / 3, y + h / 2, dot, dot, fleck);
     }
 
+    /// <summary>
+    /// Draws redstone block band and glow detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawRedstoneBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         for (int i = 0; i < 4; i++)
@@ -244,6 +340,15 @@ public static class TileRenderer
         ds.FillRectangle(x + w * 3 / 4, y + h * 2 / 3, dot, dot, glow);
     }
 
+    /// <summary>
+    /// Draws emerald block cross-cut detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawEmeraldBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         float cx = x + w / 2;
@@ -253,6 +358,15 @@ public static class TileRenderer
         ds.FillRectangle(cx - 1, y + h / 4, 2, h / 2, WithAlpha(Blend(baseColor, Color.FromArgb(255, 255, 255, 255), 0.35f), 90));
     }
 
+    /// <summary>
+    /// Draws gold block horizontal band detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawGoldBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         for (int band = 1; band <= 3; band++)
@@ -265,6 +379,15 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws diamond block facet sparkle detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawDiamondBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         int s = Math.Max(2, (int)(w / 10));
@@ -274,6 +397,15 @@ public static class TileRenderer
         ds.FillRectangle(x + w / 3, y + h / 3, w / 3, h / 3, WithAlpha(Blend(baseColor, Color.FromArgb(255, 255, 255, 255), 0.35f), 80));
     }
 
+    /// <summary>
+    /// Draws dirt block grass-top and soil band detail.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the block face in pixels.</param>
+    /// <param name="y">The top edge of the block face in pixels.</param>
+    /// <param name="w">The width of the block face in pixels.</param>
+    /// <param name="h">The height of the block face in pixels.</param>
+    /// <param name="baseColor">The base fill color of the block.</param>
     private static void DrawDirtBlock(CanvasDrawingSession ds, float x, float y, float w, float h, Color baseColor)
     {
         for (int row = 0; row < 5; row++)
@@ -285,6 +417,15 @@ public static class TileRenderer
         ds.FillRectangle(x, y, w, Math.Max(2, h / 6), Blend(baseColor, Color.FromArgb(255, 255, 255, 255), 0.15f));
     }
 
+    /// <summary>
+    /// Draws a LEGO-style brick with corner studs (Bricks skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The base fill color of the brick.</param>
+    /// <param name="highlighted">Whether to draw a selection outline.</param>
     private static void DrawBrick(CanvasDrawingSession ds, float x, float y, float size, Color baseColor, bool highlighted)
     {
         int inset = Math.Max(1, (int)(size / 10));
@@ -317,6 +458,14 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Draws a single circular stud on a brick tile.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="baseColor">The base color used to shade the stud.</param>
+    /// <param name="sx">The left edge of the stud bounding box in pixels.</param>
+    /// <param name="sy">The top edge of the stud bounding box in pixels.</param>
+    /// <param name="stud">The diameter of the stud in pixels.</param>
     private static void DrawStud(CanvasDrawingSession ds, Color baseColor, float sx, float sy, int stud)
     {
         float radius = stud / 2f;
@@ -326,6 +475,16 @@ public static class TileRenderer
         ds.DrawEllipse(cx, cy, radius - 0.5f, radius - 0.5f, Blend(baseColor, Color.FromArgb(255, 0, 0, 0), 0.15f), 1);
     }
 
+    /// <summary>
+    /// Draws a geometric shape tile (Shapes skin).
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
+    /// <param name="baseColor">The fill color of the shape.</param>
+    /// <param name="colorIndex">The palette index that selects the shape type.</param>
+    /// <param name="highlighted">Whether to draw a selection overlay.</param>
     private static void DrawShapeTile(CanvasDrawingSession ds, float x, float y, float size, Color baseColor, int colorIndex, bool highlighted)
     {
         float pad = Math.Max(2, size / 8f);
@@ -345,6 +504,15 @@ public static class TileRenderer
         }
     }
 
+    /// <summary>
+    /// Creates the Win2D geometry for a shape tile based on the color index.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="colorIndex">The palette index that selects the shape type.</param>
+    /// <param name="cx">The horizontal center of the shape in pixels.</param>
+    /// <param name="cy">The vertical center of the shape in pixels.</param>
+    /// <param name="radius">The radius (or half-extent) of the shape in pixels.</param>
+    /// <returns>The geometry describing the shape outline.</returns>
     private static CanvasGeometry CreateShapeGeometry(CanvasDrawingSession ds, int colorIndex, float cx, float cy, float radius)
     {
         return (colorIndex % 6) switch
@@ -358,6 +526,14 @@ public static class TileRenderer
         };
     }
 
+    /// <summary>
+    /// Creates an upward-pointing triangle geometry centered at the given point.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the triangle in pixels.</param>
+    /// <param name="cy">The vertical center of the triangle in pixels.</param>
+    /// <param name="r">The radius from center to vertex in pixels.</param>
+    /// <returns>The triangle polygon geometry.</returns>
     private static CanvasGeometry CreateTriangleGeometry(CanvasDrawingSession ds, float cx, float cy, float r)
     {
         var points = new Vector2[]
@@ -369,6 +545,14 @@ public static class TileRenderer
         return CanvasGeometry.CreatePolygon(ds, points);
     }
 
+    /// <summary>
+    /// Creates a diamond (rotated square) geometry centered at the given point.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the diamond in pixels.</param>
+    /// <param name="cy">The vertical center of the diamond in pixels.</param>
+    /// <param name="r">The radius from center to vertex in pixels.</param>
+    /// <returns>The diamond polygon geometry.</returns>
     private static CanvasGeometry CreateDiamondGeometry(CanvasDrawingSession ds, float cx, float cy, float r)
     {
         var points = new Vector2[]
@@ -381,6 +565,14 @@ public static class TileRenderer
         return CanvasGeometry.CreatePolygon(ds, points);
     }
 
+    /// <summary>
+    /// Creates a regular hexagon geometry centered at the given point.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the hexagon in pixels.</param>
+    /// <param name="cy">The vertical center of the hexagon in pixels.</param>
+    /// <param name="r">The circumradius of the hexagon in pixels.</param>
+    /// <returns>The hexagon polygon geometry.</returns>
     private static CanvasGeometry CreateHexagonGeometry(CanvasDrawingSession ds, float cx, float cy, float r)
     {
         var points = new Vector2[6];
@@ -393,6 +585,16 @@ public static class TileRenderer
         return CanvasGeometry.CreatePolygon(ds, points);
     }
 
+    /// <summary>
+    /// Creates a star polygon geometry with alternating inner and outer radii.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="cx">The horizontal center of the star in pixels.</param>
+    /// <param name="cy">The vertical center of the star in pixels.</param>
+    /// <param name="outerR">The outer vertex radius in pixels.</param>
+    /// <param name="innerR">The inner vertex radius in pixels.</param>
+    /// <param name="points">The number of star points.</param>
+    /// <returns>The star polygon geometry.</returns>
     private static CanvasGeometry CreateStarGeometry(
         CanvasDrawingSession ds, float cx, float cy, float outerR, float innerR, int points)
     {
@@ -407,14 +609,34 @@ public static class TileRenderer
         return CanvasGeometry.CreatePolygon(ds, vertices);
     }
 
+    /// <summary>
+    /// Draws a thin white selection border around a cell.
+    /// </summary>
+    /// <param name="ds">The Win2D drawing session.</param>
+    /// <param name="x">The left edge of the cell in pixels.</param>
+    /// <param name="y">The top edge of the cell in pixels.</param>
+    /// <param name="size">The width and height of the cell in pixels.</param>
     private static void DrawSelectionCellBorder(CanvasDrawingSession ds, float x, float y, float size)
     {
         ds.DrawRectangle(x + 1, y + 1, size - 3, size - 3, Color.FromArgb(255, 255, 255, 255), 1);
     }
 
+    /// <summary>
+    /// Returns a copy of <paramref name="color"/> with the alpha channel replaced.
+    /// </summary>
+    /// <param name="color">The source color.</param>
+    /// <param name="alpha">The new alpha value (0–255).</param>
+    /// <returns>The color with the specified alpha.</returns>
     private static Color WithAlpha(Color color, byte alpha) =>
         Color.FromArgb(alpha, color.R, color.G, color.B);
 
+    /// <summary>
+    /// Linearly interpolates between two colors in RGB space.
+    /// </summary>
+    /// <param name="a">The start color.</param>
+    /// <param name="b">The end color.</param>
+    /// <param name="t">The blend factor (0 = <paramref name="a"/>, 1 = <paramref name="b"/>).</param>
+    /// <returns>The blended color with full opacity.</returns>
     private static Color Blend(Color a, Color b, float t)
     {
         t = Math.Clamp(t, 0f, 1f);

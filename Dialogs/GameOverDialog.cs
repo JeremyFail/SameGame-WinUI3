@@ -7,15 +7,29 @@ using SameGame.UI;
 
 namespace SameGame.Dialogs;
 
+/// <summary>
+/// Displays the game-over dialog with score summary, optional high-score entry, and next-action choices.
+/// </summary>
 public sealed class GameOverDialog
 {
+    /// <summary>
+    /// Identifies the action the user chose when dismissing the game-over dialog.
+    /// </summary>
     public enum Choice
     {
+        /// <summary>Start a new game with default settings.</summary>
         NewGame,
+
+        /// <summary>Replay the current board configuration.</summary>
         PlayAgain,
+
+        /// <summary>Close the dialog without starting a new game.</summary>
         Close
     }
 
+    /// <summary>
+    /// Raised after a qualifying high score is saved to persistent storage.
+    /// </summary>
     public event Action? ScoreSaved;
 
     private readonly int _score;
@@ -23,6 +37,13 @@ public sealed class GameOverDialog
     private readonly int _height;
     private readonly int _numColors;
 
+    /// <summary>
+    /// Initializes a new game-over dialog for the given score and board parameters.
+    /// </summary>
+    /// <param name="score">The player's final score.</param>
+    /// <param name="width">The board width in cells.</param>
+    /// <param name="height">The board height in cells.</param>
+    /// <param name="numColors">The number of tile colors used in the game.</param>
     public GameOverDialog(int score, int width, int height, int numColors)
     {
         _score = score;
@@ -31,6 +52,10 @@ public sealed class GameOverDialog
         _numColors = numColors;
     }
 
+    /// <summary>
+    /// Shows the game-over dialog and returns the user's chosen next action.
+    /// </summary>
+    /// <returns>The <see cref="Choice"/> selected by the user.</returns>
     public async Task<Choice> ShowAsync()
     {
         bool qualifies = HighScoreStorage.Qualifies(_score);
@@ -44,6 +69,7 @@ public sealed class GameOverDialog
             TextWrapping = TextWrapping.Wrap
         });
 
+        // High-score entry fields when the score qualifies
         if (qualifies)
         {
             panel.Children.Add(new TextBlock { Text = Messages.Get("gameOver.newHighScore") });
@@ -70,6 +96,11 @@ public sealed class GameOverDialog
         };
     }
 
+    /// <summary>
+    /// Persists a high-score entry when both name and initials fields were provided and non-empty.
+    /// </summary>
+    /// <param name="nameBox">The name input field, or <c>null</c> if high-score entry was not shown.</param>
+    /// <param name="initialsBox">The initials input field, or <c>null</c> if high-score entry was not shown.</param>
     private void SaveIfNeeded(TextBox? nameBox, TextBox? initialsBox)
     {
         if (nameBox is null || initialsBox is null)

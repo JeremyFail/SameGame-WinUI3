@@ -31,13 +31,22 @@ public sealed class BoardMoveAnimator
     private Board? _boardFinal;
     private Board.Group? _removedGroup;
 
+    /// <summary>
+    /// Public-facing animation phase identifiers exposed to the board canvas.
+    /// </summary>
     public enum AnimationPhase
     {
+        /// <summary>Shatter particles are active over removed cells.</summary>
         Shatter,
+        /// <summary>Tiles are falling to fill vertical gaps.</summary>
         Fall,
+        /// <summary>Columns are sliding left to close horizontal gaps.</summary>
         Slide
     }
 
+    /// <summary>
+    /// Internal animation state machine phase including the idle state.
+    /// </summary>
     private enum Phase
     {
         Shatter,
@@ -46,6 +55,15 @@ public sealed class BoardMoveAnimator
         Done
     }
 
+    /// <summary>
+    /// Starts the shatter-fall-slide animation sequence for a removed group.
+    /// </summary>
+    /// <param name="before">The board state before the group was removed.</param>
+    /// <param name="group">The group of cells that was removed.</param>
+    /// <param name="settings">Game settings; animations are skipped when disabled.</param>
+    /// <param name="cellSize">The pixel size of one cell, used for particle sizing.</param>
+    /// <param name="onComplete">Callback invoked when the animation finishes or is skipped.</param>
+    /// <returns><see langword="true"/> if the animation started; <see langword="false"/> when animations are disabled.</returns>
     public bool Start(Board before, Board.Group group, GameSettings settings, int cellSize, Action onComplete)
     {
         Stop();
@@ -74,8 +92,14 @@ public sealed class BoardMoveAnimator
         return true;
     }
 
+    /// <summary>
+    /// Gets whether an animation sequence is currently running.
+    /// </summary>
     public bool IsRunning => _phase != Phase.Done;
 
+    /// <summary>
+    /// Gets the current public animation phase, or <see langword="null"/> when idle.
+    /// </summary>
     public AnimationPhase? CurrentPhase => _phase switch
     {
         Phase.Shatter => AnimationPhase.Shatter,
@@ -84,6 +108,9 @@ public sealed class BoardMoveAnimator
         _ => null
     };
 
+    /// <summary>
+    /// Immediately completes the animation if one is running.
+    /// </summary>
     public void Skip()
     {
         if (IsRunning)
@@ -92,6 +119,9 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Stops the animation timer and clears all animation state without invoking the completion callback.
+    /// </summary>
     public void Stop()
     {
         if (_timer is not null)
@@ -107,6 +137,11 @@ public sealed class BoardMoveAnimator
         ClearAnimationBoards();
     }
 
+    /// <summary>
+    /// Returns the board snapshot appropriate for the current animation phase.
+    /// </summary>
+    /// <param name="fallback">The board to return when no animation board is available.</param>
+    /// <returns>The display board for the active phase, or <paramref name="fallback"/> when idle.</returns>
     public Board DisplayBoard(Board fallback) => _phase switch
     {
         Phase.Shatter => _boardBefore ?? fallback,
@@ -115,6 +150,12 @@ public sealed class BoardMoveAnimator
         _ => fallback
     };
 
+    /// <summary>
+    /// Gets the vertical offset in cell units for a tile during the fall phase.
+    /// </summary>
+    /// <param name="x">The column index of the cell.</param>
+    /// <param name="y">The row index of the cell in the post-gravity board.</param>
+    /// <returns>The current Y offset in cell units (0 when not falling).</returns>
     public float YOffsetCells(int x, int y)
     {
         if (_phase != Phase.Fall)
@@ -126,6 +167,11 @@ public sealed class BoardMoveAnimator
         return start * (1f - _fallProgress);
     }
 
+    /// <summary>
+    /// Gets the horizontal offset in column units for a column during the slide phase.
+    /// </summary>
+    /// <param name="column">The destination column index.</param>
+    /// <returns>The current X offset in column units (0 when not sliding).</returns>
     public float XOffsetColumns(int column)
     {
         if (_phase != Phase.Slide || !_newColumnFromOld.TryGetValue(column, out int oldX))
@@ -136,8 +182,17 @@ public sealed class BoardMoveAnimator
         return (oldX - column) * (1f - _slideProgress);
     }
 
+    /// <summary>
+    /// Gets the live list of shatter particles.
+    /// </summary>
     public IReadOnlyList<Particle> Particles => _particles;
 
+    /// <summary>
+    /// Determines whether a cell is part of the removed group during the shatter phase.
+    /// </summary>
+    /// <param name="x">The column index of the cell.</param>
+    /// <param name="y">The row index of the cell.</param>
+    /// <returns><see langword="true"/> if the cell is being shattered; otherwise <see langword="false"/>.</returns>
     public bool IsRemovedCell(int x, int y)
     {
         if (_phase != Phase.Shatter || _removedGroup is null)
@@ -148,6 +203,13 @@ public sealed class BoardMoveAnimator
         return _removedGroup.Points.Any(p => p.X == x && p.Y == y);
     }
 
+    /// <summary>
+    /// Determines whether a cell requires per-frame repositioning during fall or slide.
+    /// </summary>
+    /// <param name="x">The column index of the cell.</param>
+    /// <param name="y">The row index of the cell.</param>
+    /// <param name="displayBoard">The board snapshot currently being rendered.</param>
+    /// <returns><see langword="true"/> if the cell is animated this frame; otherwise <see langword="false"/>.</returns>
     public bool IsDynamicCell(int x, int y, Board displayBoard)
     {
         if (_phase == Phase.Fall)
@@ -163,7 +225,10 @@ public sealed class BoardMoveAnimator
         return false;
     }
 
-    /// <summary>Cell bounds [minX, minY, maxX, maxY] that must be repainted during shatter.</summary>
+    /// <summary>
+    /// Returns cell bounds [minX, minY, maxX, maxY] that must be repainted during shatter.
+    /// </summary>
+    /// <returns>A four-element bounds array, or an empty array when not shattering.</returns>
     public int[] ShatterDirtyCellBounds()
     {
         if (_phase != Phase.Shatter || _removedGroup is null || _removedGroup.Points.Count == 0 || _boardBefore is null)
@@ -191,7 +256,10 @@ public sealed class BoardMoveAnimator
         return [minX, minY, maxX, maxY];
     }
 
-    /// <summary>Cell bounds covering each falling tile's start and end rows.</summary>
+    /// <summary>
+    /// Returns cell bounds covering each falling tile's start and end rows.
+    /// </summary>
+    /// <returns>A four-element bounds array, or an empty array when not falling.</returns>
     public int[] FallDirtyCellBounds()
     {
         if (_phase != Phase.Fall || _yOffsetsCells.Count == 0 || _boardAfterGravity is null)
@@ -222,7 +290,10 @@ public sealed class BoardMoveAnimator
         return [minX, minY, maxX, maxY];
     }
 
-    /// <summary>Cell bounds for all sliding columns during the slide phase.</summary>
+    /// <summary>
+    /// Returns cell bounds for all sliding columns during the slide phase.
+    /// </summary>
+    /// <returns>A four-element bounds array, or an empty array when not sliding.</returns>
     public int[] SlideDirtyCellBounds()
     {
         if (_boardFinal is null)
@@ -241,6 +312,13 @@ public sealed class BoardMoveAnimator
         return [minX, 0, maxX, _boardFinal.Height - 1];
     }
 
+    /// <summary>
+    /// Computes the pixel bounding rectangle enclosing all active particles.
+    /// </summary>
+    /// <param name="offsetX">The horizontal board offset in pixels.</param>
+    /// <param name="offsetY">The vertical board offset in pixels.</param>
+    /// <param name="cellSize">The pixel size of one cell.</param>
+    /// <returns>The particle bounds in pixels, or <see langword="null"/> when no particles exist.</returns>
     public Windows.Foundation.Rect? ParticlePixelBounds(float offsetX, float offsetY, float cellSize)
     {
         if (_particles.Count == 0)
@@ -266,6 +344,10 @@ public sealed class BoardMoveAnimator
         return new Windows.Foundation.Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
+    /// <summary>
+    /// Collects all column indices that move or are affected during the slide phase.
+    /// </summary>
+    /// <returns>The set of column indices requiring repaint during slide.</returns>
     private HashSet<int> SlideColumns()
     {
         var columns = new HashSet<int>();
@@ -297,8 +379,14 @@ public sealed class BoardMoveAnimator
         return columns;
     }
 
+    /// <summary>
+    /// Gets the removed group being animated, if any.
+    /// </summary>
     public Board.Group? RemovedGroup => _removedGroup;
 
+    /// <summary>
+    /// Advances the animation one frame and transitions between phases when durations elapse.
+    /// </summary>
     private void Tick()
     {
         if (_phase == Phase.Shatter)
@@ -307,6 +395,8 @@ public sealed class BoardMoveAnimator
         }
 
         long elapsed = Environment.TickCount64 - _phaseStart;
+
+        // Shatter phase: wait for particles to finish or hit the max timeout.
         if (_phase == Phase.Shatter && elapsed >= ShatterMs)
         {
             if (_particles.Count == 0 || elapsed >= ShatterMaxMs)
@@ -316,6 +406,7 @@ public sealed class BoardMoveAnimator
                 _phaseStart = Environment.TickCount64;
             }
         }
+        // Fall phase: ease tiles down with a bounce curve.
         else if (_phase == Phase.Fall)
         {
             _fallProgress = Math.Min(1f, elapsed / (float)FallMs);
@@ -327,6 +418,7 @@ public sealed class BoardMoveAnimator
                 _fallProgress = 1f;
             }
         }
+        // Slide phase: ease columns left into final positions.
         else if (_phase == Phase.Slide)
         {
             _slideProgress = Math.Min(1f, elapsed / (float)SlideMs);
@@ -338,6 +430,9 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Stops the timer, clears state, and invokes the completion callback.
+    /// </summary>
     private void FinishImmediately()
     {
         if (_timer is not null)
@@ -356,6 +451,9 @@ public sealed class BoardMoveAnimator
         complete?.Invoke();
     }
 
+    /// <summary>
+    /// Releases references to cached board snapshots.
+    /// </summary>
     private void ClearAnimationBoards()
     {
         _boardBefore = null;
@@ -364,6 +462,12 @@ public sealed class BoardMoveAnimator
         _removedGroup = null;
     }
 
+    /// <summary>
+    /// Computes the board state after removing the group and applying gravity only.
+    /// </summary>
+    /// <param name="before">The board state before the move.</param>
+    /// <param name="group">The removed group.</param>
+    /// <returns>A copy of the board with gravity applied but columns not yet compacted.</returns>
     private static Board ComputeAfterGravity(Board before, Board.Group group)
     {
         var board = before.Copy();
@@ -376,6 +480,12 @@ public sealed class BoardMoveAnimator
         return board;
     }
 
+    /// <summary>
+    /// Computes the final board state after full group removal and column compaction.
+    /// </summary>
+    /// <param name="before">The board state before the move.</param>
+    /// <param name="group">The removed group.</param>
+    /// <returns>The fully resolved board after the move.</returns>
     private static Board ComputeFinalBoard(Board before, Board.Group group)
     {
         var board = before.Copy();
@@ -383,6 +493,9 @@ public sealed class BoardMoveAnimator
         return board;
     }
 
+    /// <summary>
+    /// Builds the map of vertical fall distances for each tile that moved downward.
+    /// </summary>
     private void PrepareFallOffsets()
     {
         var afterRemove = BeforeWithoutGroup();
@@ -402,6 +515,10 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Returns a board copy with the removed group cleared but before gravity or compaction.
+    /// </summary>
+    /// <returns>The intermediate board used to compute fall offsets.</returns>
     private Board BeforeWithoutGroup()
     {
         var board = _boardBefore!.Copy();
@@ -413,6 +530,9 @@ public sealed class BoardMoveAnimator
         return board;
     }
 
+    /// <summary>
+    /// Builds the mapping from destination column index to source column index for the slide phase.
+    /// </summary>
     private void PrepareSlideMap()
     {
         int writeX = 0;
@@ -430,6 +550,13 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Spawns shatter particles at each cell in the removed group.
+    /// </summary>
+    /// <param name="group">The removed group.</param>
+    /// <param name="settings">Game settings used to resolve particle colors.</param>
+    /// <param name="cellSize">The pixel size of one cell.</param>
+    /// <param name="boardCells">The total number of cells on the board, used to scale particle count.</param>
     private void SpawnParticles(Board.Group group, GameSettings settings, int cellSize, int boardCells)
     {
         int perTile = ParticlesPerTile(cellSize, boardCells);
@@ -452,6 +579,12 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Determines how many particles to spawn per removed tile based on board and cell size.
+    /// </summary>
+    /// <param name="cellSize">The pixel size of one cell.</param>
+    /// <param name="boardCells">The total number of cells on the board.</param>
+    /// <returns>The particle count per tile.</returns>
     private static int ParticlesPerTile(int cellSize, int boardCells)
     {
         int count = Math.Max(2, 6 - boardCells / 400);
@@ -471,9 +604,17 @@ public sealed class BoardMoveAnimator
         return count;
     }
 
+    /// <summary>
+    /// Computes the pixel diameter of a single shatter particle.
+    /// </summary>
+    /// <param name="cellSize">The pixel size of one cell.</param>
+    /// <returns>The particle size in pixels.</returns>
     private static int ParticlePixelSize(int cellSize) =>
         Math.Max(3, Math.Min(12, (int)Math.Round(cellSize * 0.15f) + 2));
 
+    /// <summary>
+    /// Updates all live particles and removes those that have expired.
+    /// </summary>
     private void UpdateParticles()
     {
         for (int i = _particles.Count - 1; i >= 0; i--)
@@ -486,6 +627,12 @@ public sealed class BoardMoveAnimator
         }
     }
 
+    /// <summary>
+    /// Returns the row indices of filled cells in a column, bottom to top.
+    /// </summary>
+    /// <param name="board">The board to inspect.</param>
+    /// <param name="x">The column index.</param>
+    /// <returns>The list of filled row indices from bottom to top.</returns>
     private static List<int> ColumnFilledYs(Board board, int x)
     {
         var ys = new List<int>();
@@ -500,6 +647,12 @@ public sealed class BoardMoveAnimator
         return ys;
     }
 
+    /// <summary>
+    /// Determines whether every cell in a column is empty.
+    /// </summary>
+    /// <param name="board">The board to inspect.</param>
+    /// <param name="x">The column index.</param>
+    /// <returns><see langword="true"/> if the column contains no tiles; otherwise <see langword="false"/>.</returns>
     private static bool IsColumnEmpty(Board board, int x)
     {
         for (int y = 0; y < board.Height; y++)
@@ -513,10 +666,26 @@ public sealed class BoardMoveAnimator
         return true;
     }
 
+    /// <summary>
+    /// Packs a cell coordinate pair into a single dictionary key.
+    /// </summary>
+    /// <param name="x">The column index.</param>
+    /// <param name="y">The row index.</param>
+    /// <returns>The packed coordinate key.</returns>
     private static long Pack(int x, int y) => ((long)x << 32) | (uint)y;
 
+    /// <summary>
+    /// Applies a cubic ease-out curve to a normalized time value.
+    /// </summary>
+    /// <param name="t">The normalized time (0–1).</param>
+    /// <returns>The eased progress value.</returns>
     private static float EaseOutCubic(float t) => 1f - MathF.Pow(1f - t, 3f);
 
+    /// <summary>
+    /// Applies a bounce-out easing curve suitable for falling tiles.
+    /// </summary>
+    /// <param name="t">The normalized time (0–1).</param>
+    /// <returns>The eased progress value with a subtle bounce at the end.</returns>
     private static float BounceOut(float t)
     {
         if (t < 1f / 2.75f)
@@ -540,6 +709,9 @@ public sealed class BoardMoveAnimator
         return 7.5625f * t * t + 0.984375f;
     }
 
+    /// <summary>
+    /// A single shatter particle with position, velocity, and lifetime.
+    /// </summary>
     public sealed class Particle
     {
         private const int MaxLife = 28;
@@ -553,6 +725,16 @@ public sealed class BoardMoveAnimator
         private readonly Color _color;
         private int _life;
 
+        /// <summary>
+        /// Creates a new shatter particle at the given cell position.
+        /// </summary>
+        /// <param name="cellX">The initial horizontal position in cell units.</param>
+        /// <param name="cellY">The initial vertical position in cell units.</param>
+        /// <param name="velocityX">The initial horizontal velocity in cells per frame.</param>
+        /// <param name="velocityY">The initial vertical velocity in cells per frame.</param>
+        /// <param name="rotationSpeed">The rotation speed in degrees per frame.</param>
+        /// <param name="size">The particle diameter in pixels.</param>
+        /// <param name="color">The fill color of the particle.</param>
         public Particle(
             float cellX,
             float cellY,
@@ -572,6 +754,9 @@ public sealed class BoardMoveAnimator
             _life = MaxLife;
         }
 
+        /// <summary>
+        /// Advances the particle one frame, applying gravity and decrementing lifetime.
+        /// </summary>
         public void Tick()
         {
             _cellX += _velocityX;
@@ -581,18 +766,39 @@ public sealed class BoardMoveAnimator
             _life--;
         }
 
+        /// <summary>
+        /// Gets whether the particle has expired.
+        /// </summary>
         public bool Dead => _life <= 0;
 
+        /// <summary>
+        /// Gets the current horizontal position in cell units.
+        /// </summary>
         public float CellX => _cellX;
 
+        /// <summary>
+        /// Gets the current vertical position in cell units.
+        /// </summary>
         public float CellY => _cellY;
 
+        /// <summary>
+        /// Gets the current rotation angle in degrees.
+        /// </summary>
         public float Rotation => _rotation;
 
+        /// <summary>
+        /// Gets the particle diameter in pixels.
+        /// </summary>
         public int Size => _size;
 
+        /// <summary>
+        /// Gets the fill color of the particle.
+        /// </summary>
         public Color Color => _color;
 
+        /// <summary>
+        /// Gets the current opacity factor (0–1) based on remaining lifetime.
+        /// </summary>
         public float Alpha => Math.Max(0f, _life / (float)MaxLife);
     }
 }

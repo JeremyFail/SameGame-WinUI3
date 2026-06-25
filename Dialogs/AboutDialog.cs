@@ -7,12 +7,20 @@ using SameGame.UI;
 
 namespace SameGame.Dialogs;
 
+/// <summary>
+/// Displays the About dialog with application information, links, and license access.
+/// </summary>
 public sealed class AboutDialog
 {
+    /// <summary>
+    /// Shows the About dialog and optionally opens the license URL when the secondary button is clicked.
+    /// </summary>
+    /// <returns>A task that completes when the dialog is dismissed.</returns>
     public async Task ShowAsync()
     {
         var panel = new StackPanel { Spacing = 10, MinWidth = 400, MaxWidth = 440 };
 
+        // App name and version header
         panel.Children.Add(new TextBlock
         {
             Text = Messages.Format("app.name", MainPage.AppName),
@@ -54,6 +62,7 @@ public sealed class AboutDialog
             TextAlignment = TextAlignment.Center
         });
 
+        // Website link
         var websiteLink = new HyperlinkButton
         {
             Content = Messages.Get("about.websiteLink"),
@@ -64,6 +73,7 @@ public sealed class AboutDialog
             await BrowserHelper.OpenUrlAsync(BrowserHelper.WebsiteUrl, App.DialogXamlRoot!);
         panel.Children.Add(websiteLink);
 
+        // Copyright and license text
         panel.Children.Add(new TextBlock
         {
             Text = Messages.Get("about.copyright"),

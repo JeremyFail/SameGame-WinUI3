@@ -12,6 +12,9 @@ using Windows.UI;
 
 namespace SameGame.Controls;
 
+/// <summary>
+/// Win2D-backed interactive game board with tile rendering, selection highlighting, and move animations.
+/// </summary>
 public sealed partial class GameBoardControl : UserControl
 {
     private Board? _board;
@@ -33,10 +36,24 @@ public sealed partial class GameBoardControl : UserControl
     private float _frameBufferDpi;
     private bool _frameBufferStaticStale = true;
 
+    /// <summary>
+    /// Raised when the user confirms a highlighted group with a second click.
+    /// </summary>
     public event Action<Board.Group>? GroupConfirmed;
+
+    /// <summary>
+    /// Raised when a new tile group becomes highlighted.
+    /// </summary>
     public event Action? SelectionChanged;
+
+    /// <summary>
+    /// Raised when the current selection is cleared.
+    /// </summary>
     public event Action? SelectionCleared;
 
+    /// <summary>
+    /// Initializes the control, timers, and canvas draw handler.
+    /// </summary>
     public GameBoardControl()
     {
         InitializeComponent();
@@ -59,10 +76,21 @@ public sealed partial class GameBoardControl : UserControl
         };
     }
 
+    /// <summary>
+    /// Gets whether a remove/fall/slide animation is currently running.
+    /// </summary>
     public bool IsAnimating => _animator.IsRunning;
 
+    /// <summary>
+    /// Gets the currently highlighted tile group, if any.
+    /// </summary>
     public Board.Group? HighlightedGroup => _highlightedGroup;
 
+    /// <summary>
+    /// Binds a new board and settings, resetting animation and selection state.
+    /// </summary>
+    /// <param name="board">Board model to display.</param>
+    /// <param name="settings">Rendering and animation settings.</param>
     public void Configure(Board board, GameSettings settings)
     {
         _board = board;
@@ -82,6 +110,10 @@ public sealed partial class GameBoardControl : UserControl
         BoardCanvas.Invalidate();
     }
 
+    /// <summary>
+    /// Sets or clears the highlighted group and notifies selection listeners.
+    /// </summary>
+    /// <param name="group">Group to highlight, or null to clear selection.</param>
     public void SetHighlightedGroup(Board.Group? group)
     {
         if (_highlightedGroup is not null && group is not null && !GroupsEqual(_highlightedGroup, group))
@@ -106,8 +138,14 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Clears the current tile group highlight.
+    /// </summary>
     public void ClearHighlight() => SetHighlightedGroup(null);
 
+    /// <summary>
+    /// Marks cached static frames stale and refreshes selection animation state after settings change.
+    /// </summary>
     public void SettingsChanged()
     {
         _frameBufferStaticStale = true;
@@ -115,6 +153,11 @@ public sealed partial class GameBoardControl : UserControl
         BoardCanvas.Invalidate();
     }
 
+    /// <summary>
+    /// Plays the remove-group animation and invokes the callback when complete.
+    /// </summary>
+    /// <param name="group">Tile group being removed.</param>
+    /// <param name="onComplete">Callback invoked after animation finishes or is skipped.</param>
     public void AnimateRemove(Board.Group group, Action onComplete)
     {
         BeginSelectionAnimationCoastIfNeeded();
@@ -150,6 +193,11 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Main canvas draw handler: idle board, static buffer blit, or animated partial repaint.
+    /// </summary>
+    /// <param name="sender">The Win2D canvas control.</param>
+    /// <param name="args">Draw event arguments providing the drawing session.</param>
     private void BoardCanvas_Draw(CanvasControl sender, CanvasDrawEventArgs args)
     {
         if (_board is null || _settings is null)
@@ -169,6 +217,7 @@ public sealed partial class GameBoardControl : UserControl
 
         if (!_animator.IsRunning)
         {
+            // Idle path: try cached static buffer, else full paint and sync buffer
             _lastParticlePixelBounds = null;
             _shatterParticleFootprint = null;
             if (TryPaintIdleFromStaticBuffer(ds, layout.Value, displayBoard, highlightActive, sender.Size, sender.Dpi))
@@ -182,14 +231,19 @@ public sealed partial class GameBoardControl : UserControl
         }
         else if (UsesFullBoardAnimRepaint())
         {
+            // Classic skin repaints the entire board each animation frame
             PaintFullBoardAnimFrame(ds, layout.Value, displayBoard);
         }
         else
         {
+            // Other skins: update off-screen buffer then blit to screen
             PaintAnimatingBoard(ds, layout.Value, displayBoard, sender.Size, sender.Dpi);
         }
     }
 
+    /// <summary>
+    /// Releases the off-screen frame buffer and marks static cache stale.
+    /// </summary>
     private void DisposeFrameBuffer()
     {
         _frameBuffer?.Dispose();
@@ -200,11 +254,26 @@ public sealed partial class GameBoardControl : UserControl
         _frameBufferStaticStale = true;
     }
 
+    /// <summary>
+    /// Determines whether gem selection spin requires a dynamic overlay over the static buffer.
+    /// </summary>
+    /// <param name="highlightActive">True when a group is highlighted and no move animation runs.</param>
+    /// <returns>True when gem skin animations should draw spinning overlay cells.</returns>
     private bool UsesGemAnimatedOverlay(bool highlightActive) =>
         _settings?.SkinValue == GameSettings.Skin.Gems
         && _settings.AnimationsEnabled
         && (highlightActive || _selectionAnimCoasting);
 
+    /// <summary>
+    /// Blits the cached static frame buffer and paints only dynamic overlay cells when applicable.
+    /// </summary>
+    /// <param name="ds">Screen drawing session.</param>
+    /// <param name="layout">Computed board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="highlightActive">True when selection highlight should appear.</param>
+    /// <param name="controlSize">Control size in DIPs.</param>
+    /// <param name="dpi">Canvas DPI scale.</param>
+    /// <returns>True when the idle frame was painted from cache.</returns>
     private bool TryPaintIdleFromStaticBuffer(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -233,6 +302,12 @@ public sealed partial class GameBoardControl : UserControl
         return true;
     }
 
+    /// <summary>
+    /// Fills background color over cells that will be redrawn by the gem spin overlay.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state defining overlay cell positions.</param>
     private void EraseOverlayCellBackgrounds(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -254,6 +329,14 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Rebuilds the static off-screen buffer when marked stale after idle paint.
+    /// </summary>
+    /// <param name="screenSession">Screen session used to obtain the canvas device.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state without highlight overlay.</param>
+    /// <param name="controlSize">Control size in DIPs.</param>
+    /// <param name="dpi">Canvas DPI scale.</param>
     private void SyncStaticFrameBuffer(
         CanvasDrawingSession screenSession,
         BoardLayout layout,
@@ -279,6 +362,12 @@ public sealed partial class GameBoardControl : UserControl
         _frameBufferStaticStale = false;
     }
 
+    /// <summary>
+    /// Creates or reuses an off-screen render target matching the control size and DPI.
+    /// </summary>
+    /// <param name="resourceCreator">Canvas device used to allocate the render target.</param>
+    /// <param name="size">Control size in DIPs.</param>
+    /// <param name="dpi">Canvas DPI scale.</param>
     private void EnsureFrameBuffer(ICanvasResourceCreator resourceCreator, Size size, float dpi)
     {
         float width = (float)Math.Ceiling(size.Width);
@@ -303,6 +392,11 @@ public sealed partial class GameBoardControl : UserControl
         _frameBufferDpi = dpi;
     }
 
+    /// <summary>
+    /// Snapshots the current idle board into the frame buffer before an animation starts.
+    /// </summary>
+    /// <param name="controlSize">Control size in DIPs.</param>
+    /// <param name="dpi">Canvas DPI scale.</param>
     private void CaptureFrameBufferBeforeAnimation(Size controlSize, float dpi)
     {
         if (_board is null || _settings is null)
@@ -328,6 +422,11 @@ public sealed partial class GameBoardControl : UserControl
         PaintStaticIdleCells(bufferDs, layout.Value, _board, highlightActive: false);
     }
 
+    /// <summary>
+    /// Paints background color into letterbox margins around the centered board.
+    /// </summary>
+    /// <param name="ds">Drawing session, typically the off-screen buffer.</param>
+    /// <param name="layout">Board layout metrics.</param>
     private void ClearBoardLetterboxMargins(CanvasDrawingSession ds, BoardLayout layout)
     {
         var bg = _settings!.BackgroundColor();
@@ -357,18 +456,41 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Determines whether the classic skin requires a full-board repaint during animation.
+    /// </summary>
+    /// <returns>True for the classic tile skin.</returns>
     private bool UsesFullBoardAnimRepaint() =>
         _settings?.SkinValue == GameSettings.Skin.Classic;
 
+    /// <summary>
+    /// Determines whether the current skin uses tight seam fixes during animation repaints.
+    /// </summary>
+    /// <returns>True for modern, blockcraft, and bricks skins.</returns>
     private bool UsesTightAnimSeamFix() =>
         _settings?.SkinValue is GameSettings.Skin.Modern
             or GameSettings.Skin.Blockcraft
             or GameSettings.Skin.Bricks;
 
+    /// <summary>
+    /// Returns extra cell padding applied when repainting animated dirty regions.
+    /// </summary>
+    /// <returns>One cell of padding for tight-seam skins, zero otherwise.</returns>
     private int AnimRepaintCellPadding() => UsesTightAnimSeamFix() ? 1 : 0;
 
+    /// <summary>
+    /// Returns pixel inset applied when clearing animated dirty rectangles.
+    /// </summary>
+    /// <returns>1.5 pixels for tight-seam skins, zero otherwise.</returns>
     private float AnimClearInsetPx() => UsesTightAnimSeamFix() ? 1.5f : 0f;
 
+    /// <summary>
+    /// Paints all idle board cells, then dynamic or highlighted overlay cells as needed.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="highlightActive">True when selection highlight should appear.</param>
     private void PaintIdleBoard(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -386,6 +508,12 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Paints highlighted cells for non-gem skins during idle state.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to read tile colors from.</param>
     private void PaintHighlightedIdleCells(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -408,6 +536,13 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Paints all non-overlay idle cells into the static buffer or screen.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="highlightActive">Unused; static cells never draw highlight state.</param>
     private void PaintStaticIdleCells(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -434,6 +569,13 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Paints gem spin overlay cells for highlighted or coasting groups.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="highlightActive">True when the current highlight should spin.</param>
     private void PaintDynamicIdleCells(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -467,6 +609,12 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Determines whether a cell is drawn on the dynamic overlay rather than the static buffer.
+    /// </summary>
+    /// <param name="x">Cell column index.</param>
+    /// <param name="y">Cell row index.</param>
+    /// <returns>True when the cell belongs to the highlight or coasting group.</returns>
     private bool IsOverlayCell(int x, int y)
     {
         if (IsInGroup(x, y, _highlightedGroup))
@@ -477,6 +625,13 @@ public sealed partial class GameBoardControl : UserControl
         return _selectionAnimCoasting && IsInCoastingGroup(x, y);
     }
 
+    /// <summary>
+    /// Tests whether a board cell belongs to the given tile group.
+    /// </summary>
+    /// <param name="x">Cell column index.</param>
+    /// <param name="y">Cell row index.</param>
+    /// <param name="group">Group to test membership against, or null.</param>
+    /// <returns>True when the cell is part of the group.</returns>
     private static bool IsInGroup(int x, int y, Board.Group? group)
     {
         if (group is null)
@@ -495,6 +650,10 @@ public sealed partial class GameBoardControl : UserControl
         return false;
     }
 
+    /// <summary>
+    /// Determines whether the gem spin angle requires a full overlay redraw this frame.
+    /// </summary>
+    /// <returns>False at rest (near 0°); true while visibly rotated.</returns>
     private bool SelectionSpinNeedsFullDraw()
     {
         float angleNorm = _gemSpinDegrees % 360f;
@@ -506,6 +665,12 @@ public sealed partial class GameBoardControl : UserControl
         return angleNorm >= 0.5f && angleNorm <= 359.5f;
     }
 
+    /// <summary>
+    /// Repaints the entire board for classic-skin animation frames including shatter particles.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Animated board state from the animator.</param>
     private void PaintFullBoardAnimFrame(CanvasDrawingSession ds, BoardLayout layout, Board displayBoard)
     {
         ds.Clear(_settings!.BackgroundColor());
@@ -521,6 +686,14 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Updates the off-screen buffer for partial animation repaint, then blits to the screen.
+    /// </summary>
+    /// <param name="ds">Screen drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Animated board state from the animator.</param>
+    /// <param name="controlSize">Control size in DIPs.</param>
+    /// <param name="dpi">Canvas DPI scale.</param>
     private void PaintAnimatingBoard(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -547,6 +720,11 @@ public sealed partial class GameBoardControl : UserControl
         BlitFrameBuffer(ds, controlSize);
     }
 
+    /// <summary>
+    /// Blits the off-screen frame buffer to the screen with appropriate interpolation.
+    /// </summary>
+    /// <param name="ds">Screen drawing session.</param>
+    /// <param name="controlSize">Control size in DIPs.</param>
     private void BlitFrameBuffer(CanvasDrawingSession ds, Size controlSize)
     {
         if (_frameBuffer is null)
@@ -565,6 +743,12 @@ public sealed partial class GameBoardControl : UserControl
         ds.DrawImage(_frameBuffer, source, dest, 1f, interpolation);
     }
 
+    /// <summary>
+    /// Repaints only dirty regions of the off-screen buffer for the current animation phase.
+    /// </summary>
+    /// <param name="ds">Off-screen buffer drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Animated board state from the animator.</param>
     private void PaintAnimatingBoardCore(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -576,6 +760,7 @@ public sealed partial class GameBoardControl : UserControl
         {
             case BoardMoveAnimator.AnimationPhase.Shatter:
             {
+                // Shatter: expand dirty rect to include particles, then draw debris
                 var particleClear = ParticleClearRegion(layout);
                 if (particleClear is not null)
                 {
@@ -594,6 +779,7 @@ public sealed partial class GameBoardControl : UserControl
             }
             case BoardMoveAnimator.AnimationPhase.Fall:
             {
+                // Fall: repaint cells affected by gravity plus prior particle footprint
                 _lastParticlePixelBounds = null;
                 int[] bounds = _animator.FallDirtyCellBounds();
                 bounds = UnionCellBounds(
@@ -605,6 +791,7 @@ public sealed partial class GameBoardControl : UserControl
             }
             case BoardMoveAnimator.AnimationPhase.Slide:
             {
+                // Slide: repaint columns that shifted horizontally
                 _lastParticlePixelBounds = null;
                 int[] bounds = _animator.SlideDirtyCellBounds();
                 RepaintAnimRegion(ds, layout, displayBoard, bounds, GrowPixelRect(CellBoundsToPixelRect(bounds, layout)));
@@ -613,6 +800,14 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Clears and repaints a bounded cell region during animation.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Animated board state from the animator.</param>
+    /// <param name="bounds">Dirty cell bounds as [minX, minY, maxX, maxY].</param>
+    /// <param name="clearRect">Optional pixel rectangle to clear before repaint.</param>
     private void RepaintAnimRegion(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -634,6 +829,14 @@ public sealed partial class GameBoardControl : UserControl
         PaintCellsInBounds(ds, layout, displayBoard, paintBounds);
     }
 
+    /// <summary>
+    /// Expands cell bounds by a padding amount clamped to the board dimensions.
+    /// </summary>
+    /// <param name="bounds">Original bounds as [minX, minY, maxX, maxY].</param>
+    /// <param name="pad">Cells to add on each side.</param>
+    /// <param name="boardW">Board width in cells.</param>
+    /// <param name="boardH">Board height in cells.</param>
+    /// <returns>Padded bounds array, or the original when padding is zero or bounds invalid.</returns>
     private static int[] ExpandCellBounds(int[] bounds, int pad, int boardW, int boardH)
     {
         if (bounds.Length < 4 || pad <= 0)
@@ -650,6 +853,12 @@ public sealed partial class GameBoardControl : UserControl
         ];
     }
 
+    /// <summary>
+    /// Shrinks a pixel rectangle inward by the given inset, preserving the original when too small.
+    /// </summary>
+    /// <param name="rect">Optional pixel rectangle.</param>
+    /// <param name="inset">Pixels to subtract from each side.</param>
+    /// <returns>Inset rectangle, or the original when inset is zero or result would be non-positive.</returns>
     private static Rect? InsetPixelRect(Rect? rect, float inset)
     {
         if (rect is null || inset <= 0f)
@@ -668,6 +877,13 @@ public sealed partial class GameBoardControl : UserControl
         return new Rect(value.X + inset, value.Y + inset, width, height);
     }
 
+    /// <summary>
+    /// Paints cells within bounds given as a four-element array.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="bounds">Cell bounds as [minX, minY, maxX, maxY].</param>
     private void PaintCellsInBounds(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -682,6 +898,16 @@ public sealed partial class GameBoardControl : UserControl
         PaintCellsInBounds(ds, layout, displayBoard, bounds[0], bounds[1], bounds[2], bounds[3]);
     }
 
+    /// <summary>
+    /// Paints cells within an inclusive cell rectangle, skipping removed and empty cells.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="displayBoard">Board state to render.</param>
+    /// <param name="minX">Minimum column index.</param>
+    /// <param name="minY">Minimum row index.</param>
+    /// <param name="maxX">Maximum column index.</param>
+    /// <param name="maxY">Maximum row index.</param>
     private void PaintCellsInBounds(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -718,6 +944,14 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Draws a stationary cell during animation at its grid position.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="x">Cell column index.</param>
+    /// <param name="y">Cell row index.</param>
+    /// <param name="color">Tile color index.</param>
     private void DrawAnimRestCell(CanvasDrawingSession ds, BoardLayout layout, int x, int y, int color)
     {
         var rect = layout.GetCellRect(x, y);
@@ -731,6 +965,14 @@ public sealed partial class GameBoardControl : UserControl
             highlighted: false);
     }
 
+    /// <summary>
+    /// Draws a cell at its animated offset during fall or slide phases.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="x">Logical cell column index.</param>
+    /// <param name="y">Logical cell row index.</param>
+    /// <param name="color">Tile color index.</param>
     private void DrawAnimatedCell(CanvasDrawingSession ds, BoardLayout layout, int x, int y, int color)
     {
         float xOffCols = _animator.XOffsetColumns(x);
@@ -740,6 +982,16 @@ public sealed partial class GameBoardControl : UserControl
         TileRenderer.DrawCell(ds, px, py, layout.CellSize, color, _settings!, highlighted: false);
     }
 
+    /// <summary>
+    /// Draws a single board cell with optional gem spin for highlight or coast states.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="x">Cell column index.</param>
+    /// <param name="y">Cell row index.</param>
+    /// <param name="color">Tile color index.</param>
+    /// <param name="highlighted">True when the cell is part of the active selection.</param>
+    /// <param name="coasting">True when the cell is finishing a spin coast animation.</param>
     private void DrawBoardCell(
         CanvasDrawingSession ds,
         BoardLayout layout,
@@ -769,6 +1021,13 @@ public sealed partial class GameBoardControl : UserControl
             spin);
     }
 
+    /// <summary>
+    /// Combines shatter dirty cell bounds with particle footprint cell bounds.
+    /// </summary>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="drawBoard">Board state used for dimension clamping.</param>
+    /// <param name="particleClear">Optional pixel clear region for particles.</param>
+    /// <returns>Union of shatter and particle cell bounds.</returns>
     private int[] ShatterRepaintCellBounds(BoardLayout layout, Board drawBoard, Rect? particleClear)
     {
         int[] shatter = _animator.ShatterDirtyCellBounds();
@@ -776,6 +1035,11 @@ public sealed partial class GameBoardControl : UserControl
         return UnionCellBounds(shatter, particles);
     }
 
+    /// <summary>
+    /// Computes the padded pixel region that must be cleared for current shatter particles.
+    /// </summary>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <returns>Padded pixel rectangle covering current and previous particle bounds.</returns>
     private Rect? ParticleClearRegion(BoardLayout layout)
     {
         var current = _animator.ParticlePixelBounds(layout.OffsetX, layout.OffsetY, layout.CellSize);
@@ -794,9 +1058,21 @@ public sealed partial class GameBoardControl : UserControl
             clear.Value.Height + pad * 2);
     }
 
+    /// <summary>
+    /// Unions cell-bounds pixel clear region with an optional extra clear rectangle.
+    /// </summary>
+    /// <param name="bounds">Dirty cell bounds as [minX, minY, maxX, maxY].</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="extraClear">Optional additional pixel clear region.</param>
+    /// <returns>Grown union pixel rectangle, or null when both inputs are empty.</returns>
     private static Rect? UnionPixelClear(int[] bounds, BoardLayout layout, Rect? extraClear) =>
         GrowPixelRect(UnionRects(GrowPixelRect(CellBoundsToPixelRect(bounds, layout)), extraClear));
 
+    /// <summary>
+    /// Expands a pixel rectangle by one pixel on each side to avoid seam artifacts.
+    /// </summary>
+    /// <param name="rect">Optional source rectangle.</param>
+    /// <returns>Grown rectangle, or null when input is null.</returns>
     private static Rect? GrowPixelRect(Rect? rect)
     {
         if (rect is null)
@@ -809,6 +1085,12 @@ public sealed partial class GameBoardControl : UserControl
         return new Rect(value.X - grow, value.Y - grow, value.Width + grow * 2, value.Height + grow * 2);
     }
 
+    /// <summary>
+    /// Returns the smallest axis-aligned rectangle containing both inputs.
+    /// </summary>
+    /// <param name="a">First optional rectangle.</param>
+    /// <param name="b">Second optional rectangle.</param>
+    /// <returns>Union rectangle, or whichever operand is non-null.</returns>
     private static Rect? UnionRects(Rect? a, Rect? b)
     {
         if (a is null)
@@ -828,6 +1110,12 @@ public sealed partial class GameBoardControl : UserControl
         return new Rect(x1, y1, x2 - x1, y2 - y1);
     }
 
+    /// <summary>
+    /// Unions two cell-bound arrays into a single bounding box.
+    /// </summary>
+    /// <param name="a">First bounds as [minX, minY, maxX, maxY].</param>
+    /// <param name="b">Second bounds as [minX, minY, maxX, maxY].</param>
+    /// <returns>Union bounds, or a clone of the valid operand when the other is empty.</returns>
     private static int[] UnionCellBounds(int[] a, int[] b)
     {
         if (a.Length < 4)
@@ -849,6 +1137,14 @@ public sealed partial class GameBoardControl : UserControl
         ];
     }
 
+    /// <summary>
+    /// Converts a pixel rectangle to inclusive cell bounds clamped to the board.
+    /// </summary>
+    /// <param name="rect">Optional pixel rectangle in canvas coordinates.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="boardW">Board width in cells.</param>
+    /// <param name="boardH">Board height in cells.</param>
+    /// <returns>Cell bounds array, or empty when conversion fails.</returns>
     private static int[] PixelRectToCellBounds(Rect? rect, BoardLayout layout, int boardW, int boardH)
     {
         if (rect is null || boardW <= 0 || boardH <= 0)
@@ -873,6 +1169,12 @@ public sealed partial class GameBoardControl : UserControl
         return [minX, minY, maxX, maxY];
     }
 
+    /// <summary>
+    /// Converts a four-element cell bounds array to a pixel rectangle.
+    /// </summary>
+    /// <param name="bounds">Cell bounds as [minX, minY, maxX, maxY].</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <returns>Pixel rectangle, or null when bounds are invalid.</returns>
     private static Rect? CellBoundsToPixelRect(int[] bounds, BoardLayout layout)
     {
         if (bounds.Length < 4)
@@ -883,6 +1185,15 @@ public sealed partial class GameBoardControl : UserControl
         return CellBoundsToPixelRect(bounds[0], bounds[1], bounds[2], bounds[3], layout);
     }
 
+    /// <summary>
+    /// Converts inclusive cell indices to a pixel rectangle on the canvas.
+    /// </summary>
+    /// <param name="minX">Minimum column index.</param>
+    /// <param name="minY">Minimum row index.</param>
+    /// <param name="maxX">Maximum column index.</param>
+    /// <param name="maxY">Maximum row index.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <returns>Pixel rectangle covering the cell range.</returns>
     private static Rect CellBoundsToPixelRect(int minX, int minY, int maxX, int maxY, BoardLayout layout)
     {
         float x = layout.OffsetX + minX * layout.CellSize;
@@ -892,6 +1203,12 @@ public sealed partial class GameBoardControl : UserControl
         return new Rect(x, y, w, h);
     }
 
+    /// <summary>
+    /// Clears a dirty pixel rectangle, respecting board letterbox margins outside the grid.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
+    /// <param name="dirty">Optional dirty rectangle in canvas coordinates.</param>
     private void ClearAnimDirtyRect(CanvasDrawingSession ds, BoardLayout layout, Rect? dirty)
     {
         if (dirty is null || dirty.Value.Width <= 0 || dirty.Value.Height <= 0)
@@ -935,6 +1252,11 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Draws shatter phase particle sprites at their animated positions.
+    /// </summary>
+    /// <param name="ds">Drawing session.</param>
+    /// <param name="layout">Board layout metrics.</param>
     private void DrawParticles(CanvasDrawingSession ds, BoardLayout layout)
     {
         foreach (var particle in _animator.Particles)
@@ -952,6 +1274,11 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Handles pointer press: skip animation, select group, or confirm highlighted group.
+    /// </summary>
+    /// <param name="sender">The canvas that received the pointer event.</param>
+    /// <param name="e">Pointer routed event arguments.</param>
     private void BoardCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (_board is null || _settings is null)
@@ -995,6 +1322,12 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Compares two tile groups for equal size, color, and point set.
+    /// </summary>
+    /// <param name="a">First group.</param>
+    /// <param name="b">Second group.</param>
+    /// <returns>True when both groups represent the same tiles.</returns>
     private static bool GroupsEqual(Board.Group a, Board.Group b)
     {
         if (a.Size != b.Size || a.Color != b.Color)
@@ -1006,6 +1339,11 @@ public sealed partial class GameBoardControl : UserControl
         return b.Points.All(p => setA.Contains((p.X, p.Y)));
     }
 
+    /// <summary>
+    /// Computes centered board layout metrics for the current control size.
+    /// </summary>
+    /// <param name="controlSize">Available control size in DIPs.</param>
+    /// <returns>Layout metrics, or null when the board or size is invalid.</returns>
     private BoardLayout? ComputeLayout(Size controlSize)
     {
         if (_board is null || controlSize.Width <= 0 || controlSize.Height <= 0)
@@ -1024,6 +1362,11 @@ public sealed partial class GameBoardControl : UserControl
         return new BoardLayout(offsetX, offsetY, cellSize, _board.Width, _board.Height);
     }
 
+    /// <summary>
+    /// Advances gem spin angle each frame and commits coasting groups to the static buffer at rest.
+    /// </summary>
+    /// <param name="sender">The selection spin dispatcher timer.</param>
+    /// <param name="e">Tick event arguments.</param>
     private void SelectionSpinTimer_Tick(object? sender, object e)
     {
         long now = Environment.TickCount64;
@@ -1057,6 +1400,9 @@ public sealed partial class GameBoardControl : UserControl
         BoardCanvas.Invalidate();
     }
 
+    /// <summary>
+    /// Starts a spin coast when deselecting a gem group mid-rotation so it finishes smoothly.
+    /// </summary>
     private void BeginSelectionAnimationCoastIfNeeded()
     {
         if (_highlightedGroup is null
@@ -1089,6 +1435,12 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Tests whether a cell belongs to any group currently coasting to rest.
+    /// </summary>
+    /// <param name="x">Cell column index.</param>
+    /// <param name="y">Cell row index.</param>
+    /// <returns>True when the cell is in a coasting group.</returns>
     private bool IsInCoastingGroup(int x, int y)
     {
         foreach (var group in _coastingGroups)
@@ -1105,6 +1457,10 @@ public sealed partial class GameBoardControl : UserControl
         return false;
     }
 
+    /// <summary>
+    /// Bakes coasting group tiles into the static frame buffer at their final unspun appearance.
+    /// </summary>
+    /// <param name="groups">Groups whose tiles should be committed to the static buffer.</param>
     private void CommitOverlayGroupsToStaticBuffer(IReadOnlyList<Board.Group> groups)
     {
         if (_frameBuffer is null || _board is null || groups.Count == 0)
@@ -1134,6 +1490,9 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Starts or stops the selection spin timer based on highlight and coast state.
+    /// </summary>
     private void UpdateSelectionSpinTimer()
     {
         bool shouldAnimateSelection = _settings?.SkinValue == GameSettings.Skin.Gems
@@ -1156,6 +1515,9 @@ public sealed partial class GameBoardControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Stops the selection spin timer and resets spin state unless a coast is active.
+    /// </summary>
     private void StopSelectionSpin()
     {
         _selectionSpinTimer.Stop();
@@ -1169,15 +1531,42 @@ public sealed partial class GameBoardControl : UserControl
         _lastSpinTick = 0;
     }
 
+    /// <summary>
+    /// Cached board geometry: offsets, cell size, and helper coordinate conversions.
+    /// </summary>
+    /// <param name="OffsetX">Horizontal offset centering the board in the control.</param>
+    /// <param name="OffsetY">Vertical offset centering the board in the control.</param>
+    /// <param name="CellSize">Square cell edge length in DIPs.</param>
+    /// <param name="Width">Board width in cells.</param>
+    /// <param name="Height">Board height in cells.</param>
     private readonly record struct BoardLayout(float OffsetX, float OffsetY, float CellSize, int Width, int Height)
     {
+        /// <summary>
+        /// Gets the total board width in DIPs.
+        /// </summary>
         public float BoardWidth => CellSize * Width;
 
+        /// <summary>
+        /// Gets the total board height in DIPs.
+        /// </summary>
         public float BoardHeight => CellSize * Height;
 
+        /// <summary>
+        /// Returns the pixel rectangle for a cell at the given grid coordinates.
+        /// </summary>
+        /// <param name="x">Cell column index.</param>
+        /// <param name="y">Cell row index.</param>
+        /// <returns>Cell bounds in canvas coordinates.</returns>
         public Rect GetCellRect(int x, int y) =>
             new(OffsetX + x * CellSize, OffsetY + y * CellSize, CellSize, CellSize);
 
+        /// <summary>
+        /// Maps a canvas point to board cell coordinates when inside the grid.
+        /// </summary>
+        /// <param name="point">Pointer or hit-test position in canvas coordinates.</param>
+        /// <param name="cellX">When successful, the cell column index.</param>
+        /// <param name="cellY">When successful, the cell row index.</param>
+        /// <returns>True when the point lies within the board grid.</returns>
         public bool TryCellAt(Point point, out int cellX, out int cellY)
         {
             float localX = (float)point.X - OffsetX;

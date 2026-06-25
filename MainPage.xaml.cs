@@ -12,6 +12,9 @@ using SameGame.Views;
 
 namespace SameGame;
 
+/// <summary>
+/// Primary game page hosting the menu bar, board, status labels, objectives panel, and game session logic.
+/// </summary>
 public sealed partial class MainPage : Page
 {
     // Fallback value for the app name in case the messages are not loaded correctly
@@ -34,6 +37,9 @@ public sealed partial class MainPage : Page
     private HighScoresWindow? _highScoresWindow;
     private HelpWindow? _helpWindow;
 
+    /// <summary>
+    /// Initializes the page, wires lifecycle handlers, and attaches the countdown timer tick.
+    /// </summary>
     public MainPage()
     {
         InitializeComponent();
@@ -42,6 +48,11 @@ public sealed partial class MainPage : Page
         Unloaded += MainPage_Unloaded;
     }
 
+    /// <summary>
+    /// Performs one-time initialization when the page loads: settings, session, menus, and first game.
+    /// </summary>
+    /// <param name="sender">The page that raised the event.</param>
+    /// <param name="e">Loaded event arguments.</param>
     private void MainPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (_settings is not null)
@@ -62,6 +73,11 @@ public sealed partial class MainPage : Page
         _ = StartNewGameAsync(false);
     }
 
+    /// <summary>
+    /// Persists settings and shuts down sound when the page is unloaded.
+    /// </summary>
+    /// <param name="sender">The page that raised the event.</param>
+    /// <param name="e">Unloaded event arguments.</param>
     private void MainPage_Unloaded(object sender, RoutedEventArgs e)
     {
         PersistSessionState();
@@ -69,12 +85,19 @@ public sealed partial class MainPage : Page
         _soundManager.Shutdown();
     }
 
+    /// <summary>
+    /// Saves the current game settings to persistent storage.
+    /// </summary>
     public void PersistSessionState() => SettingsPersistence.Save(_settings);
 
+    /// <summary>
+    /// Rebuilds the entire menu bar from localized strings and current settings state.
+    /// </summary>
     private void BuildMenus()
     {
         MainMenuBar.Items.Clear();
 
+        // File menu: new game, restart, undo/redo, exit
         var fileMenu = new MenuBarItem { Title = Messages.Get("menu.file") };
         var newGame = new MenuFlyoutItem { Text = Messages.Get("menu.file.newGame") };
         newGame.Click += (_, _) => _ = StartNewGameAsync(true);
@@ -94,6 +117,7 @@ public sealed partial class MainPage : Page
         fileMenu.Items.Add(new MenuFlyoutSeparator());
         fileMenu.Items.Add(exit);
 
+        // Options menu: language, difficulty, size, sound/music, animations, advanced
         var optionsMenu = new MenuBarItem { Title = Messages.Get("menu.options") };
         optionsMenu.Items.Add(BuildLanguageSubMenu());
         optionsMenu.Items.Add(new MenuFlyoutSeparator());
@@ -127,6 +151,7 @@ public sealed partial class MainPage : Page
         advanced.Click += async (_, _) => await OpenAdvancedOptionsAsync();
         optionsMenu.Items.Add(advanced);
 
+        // View menu: skin, objectives panel, high scores window
         var viewMenu = new MenuBarItem { Title = Messages.Get("menu.view") };
         viewMenu.Items.Add(BuildSkinSubMenu());
         viewMenu.Items.Add(new MenuFlyoutSeparator());
@@ -142,6 +167,7 @@ public sealed partial class MainPage : Page
         viewMenu.Items.Add(_objectivesMenuItem);
         viewMenu.Items.Add(_highScoresMenuItem);
 
+        // Help menu: help window and about dialog
         var helpMenu = new MenuBarItem { Title = Messages.Get("menu.help") };
         var helpItem = new MenuFlyoutItem { Text = Messages.Get("menu.help.help") };
         helpItem.Click += (_, _) => ShowHelp();
@@ -156,6 +182,10 @@ public sealed partial class MainPage : Page
         MainMenuBar.Items.Add(helpMenu);
     }
 
+    /// <summary>
+    /// Builds the language radio submenu from available locale entries.
+    /// </summary>
+    /// <returns>A submenu with one radio item per supported language.</returns>
     private MenuFlyoutSubItem BuildLanguageSubMenu()
     {
         var menu = new MenuFlyoutSubItem { Text = Messages.Get("menu.options.language") };
@@ -169,6 +199,10 @@ public sealed partial class MainPage : Page
         return menu;
     }
 
+    /// <summary>
+    /// Builds the board generation difficulty radio submenu.
+    /// </summary>
+    /// <returns>A submenu with one radio item per difficulty level.</returns>
     private MenuFlyoutSubItem BuildDifficultySubMenu()
     {
         var menu = new MenuFlyoutSubItem { Text = Messages.Get("menu.options.difficulty") };
@@ -182,6 +216,10 @@ public sealed partial class MainPage : Page
         return menu;
     }
 
+    /// <summary>
+    /// Builds the board size preset radio submenu plus a custom size entry.
+    /// </summary>
+    /// <returns>A submenu with preset sizes and a custom-size shortcut.</returns>
     private MenuFlyoutSubItem BuildSizeSubMenu()
     {
         var menu = new MenuFlyoutSubItem { Text = Messages.Get("menu.options.size") };
@@ -199,6 +237,10 @@ public sealed partial class MainPage : Page
         return menu;
     }
 
+    /// <summary>
+    /// Builds the visual skin radio submenu.
+    /// </summary>
+    /// <returns>A submenu with one radio item per tile skin.</returns>
     private MenuFlyoutSubItem BuildSkinSubMenu()
     {
         var menu = new MenuFlyoutSubItem { Text = Messages.Get("menu.view.skin") };
@@ -212,6 +254,9 @@ public sealed partial class MainPage : Page
         return menu;
     }
 
+    /// <summary>
+    /// Registers keyboard accelerators for undo, redo, new game, and help.
+    /// </summary>
     private void InstallKeyboardShortcuts()
     {
         AddAccelerator(global::Windows.System.VirtualKey.Z, global::Windows.System.VirtualKeyModifiers.Control, () => UndoMove());
@@ -220,6 +265,12 @@ public sealed partial class MainPage : Page
         AddAccelerator(global::Windows.System.VirtualKey.F1, global::Windows.System.VirtualKeyModifiers.None, ShowHelp);
     }
 
+    /// <summary>
+    /// Adds a keyboard accelerator that invokes the given action and marks the key as handled.
+    /// </summary>
+    /// <param name="key">Virtual key to bind.</param>
+    /// <param name="modifiers">Required modifier keys.</param>
+    /// <param name="action">Callback invoked when the accelerator fires.</param>
     private void AddAccelerator(
         global::Windows.System.VirtualKey key,
         global::Windows.System.VirtualKeyModifiers modifiers,
@@ -238,6 +289,11 @@ public sealed partial class MainPage : Page
         KeyboardAccelerators.Add(accelerator);
     }
 
+    /// <summary>
+    /// Handles global key-down events as a fallback when menu focus prevents accelerators from firing.
+    /// </summary>
+    /// <param name="sender">The element that received the key event.</param>
+    /// <param name="e">Key routing arguments including the pressed key.</param>
     private void OnGlobalKeyDown(object sender, KeyRoutedEventArgs e)
     {
         var ctrl = Microsoft.UI.Input.InputKeyboardSource
@@ -266,6 +322,10 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Refreshes the objectives panel when it is currently visible.
+    /// </summary>
+    /// <param name="board">Board state to display in the objectives panel.</param>
     private void UpdateObjectivesIfVisible(Board board)
     {
         if (ObjectivesPanel.Visibility == Visibility.Visible)
@@ -274,8 +334,12 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Subscribes to board selection and confirmation events to drive scoring and move application.
+    /// </summary>
     private void WireBoardEvents()
     {
+        // Highlight changed: update status labels or show locked-game prompt
         BoardPanel.SelectionChanged += () =>
         {
             if (_session.IsLocked)
@@ -294,6 +358,7 @@ public sealed partial class MainPage : Page
 
         BoardPanel.SelectionCleared += ClearSelection;
 
+        // Second click on same group: play remove animation then apply move to session
         BoardPanel.GroupConfirmed += group =>
         {
             if (_session.IsLocked)
@@ -330,6 +395,11 @@ public sealed partial class MainPage : Page
         };
     }
 
+    /// <summary>
+    /// Generates a new board, resets the session, and optionally confirms abandoning the current game.
+    /// </summary>
+    /// <param name="confirmIfNeeded">When true, prompts if the current game has a non-zero score.</param>
+    /// <returns>A task that completes when the new game is ready or the user cancels.</returns>
     private async Task StartNewGameAsync(bool confirmIfNeeded)
     {
         if (confirmIfNeeded && !await ConfirmAbandonGameAsync(Messages.Get("confirm.action.newGame")))
@@ -343,6 +413,7 @@ public sealed partial class MainPage : Page
 
         try
         {
+            // Generate board off the UI thread to keep the spinner responsive
             var generated = await Task.Run(() => BoardGenerator.Generate(_settings, DateTime.UtcNow.Ticks));
             _session = new GameSession(_settings);
             _session.NewGame(generated.Board, generated.Seed);
@@ -360,6 +431,11 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Restarts the current game with the same seed and optionally confirms abandoning progress.
+    /// </summary>
+    /// <param name="confirmIfNeeded">When true, prompts if the current game has a non-zero score.</param>
+    /// <returns>A task that completes when the restart finishes or the user cancels.</returns>
     private async Task RestartGameAsync(bool confirmIfNeeded)
     {
         if (confirmIfNeeded && !await ConfirmAbandonGameAsync(Messages.Get("confirm.action.restart")))
@@ -373,9 +449,16 @@ public sealed partial class MainPage : Page
         StartTimerIfEnabled();
     }
 
+    /// <summary>
+    /// Fire-and-forget wrapper around <see cref="RestartGameAsync"/>.
+    /// </summary>
+    /// <param name="confirmIfNeeded">When true, prompts if the current game has a non-zero score.</param>
     private void RestartGame(bool confirmIfNeeded) =>
         _ = RestartGameAsync(confirmIfNeeded);
 
+    /// <summary>
+    /// Reverts the last move when undo is available and no animation is running.
+    /// </summary>
     private void UndoMove()
     {
         if (BoardPanel.IsAnimating || _session.IsLocked)
@@ -395,6 +478,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Reapplies the last undone move when redo is available and no animation is running.
+    /// </summary>
     private void RedoMove()
     {
         if (BoardPanel.IsAnimating || _session.IsLocked)
@@ -414,6 +500,10 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Synchronizes the board control, score, selection, undo/redo state, and objectives with the session.
+    /// </summary>
+    /// <param name="boardDimensionsChanged">When true, reconfigures the board control for new dimensions.</param>
     private void RefreshUi(bool boardDimensionsChanged)
     {
         BoardPanel.Configure(_session.Board, _settings);
@@ -423,6 +513,10 @@ public sealed partial class MainPage : Page
         UpdateObjectivesIfVisible(_session.Board);
     }
 
+    /// <summary>
+    /// Enables or disables undo and redo menu items based on session state and animation status.
+    /// </summary>
+    /// <param name="enabled">Whether move actions should be interactable.</param>
     private void SetMoveActionsEnabled(bool enabled)
     {
         if (_undoItem is not null)
@@ -436,6 +530,11 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Locks the session, stops the timer, plays game-over sound, and shows the game-over dialog.
+    /// </summary>
+    /// <param name="timedOut">True when the game ended because the countdown reached zero.</param>
+    /// <returns>A task that completes after the dialog is dismissed and any follow-up action runs.</returns>
     private async Task HandleGameOverAsync(bool timedOut)
     {
         _session.Lock();
@@ -464,6 +563,10 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Shows a dialog when the user interacts with a locked (game-over) board.
+    /// </summary>
+    /// <returns>A task that completes after the user chooses play again, new game, or close.</returns>
     private async Task ShowLockedGamePromptAsync()
     {
         var dialog = new ContentDialog
@@ -487,6 +590,10 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Switches the UI language, rebuilds menus, and refreshes visible labels.
+    /// </summary>
+    /// <param name="code">BCP-47 or catalog language code to activate.</param>
     private void ChangeLanguage(string code)
     {
         _settings.LanguageCode = code;
@@ -497,6 +604,11 @@ public sealed partial class MainPage : Page
         RefreshStatusLabels();
     }
 
+    /// <summary>
+    /// Changes board generation difficulty and starts a new game after confirmation.
+    /// </summary>
+    /// <param name="difficulty">Target generation difficulty.</param>
+    /// <returns>A task that completes when the setting is applied or the user cancels.</returns>
     private async Task ChangeDifficultyAsync(GameSettings.GenerationDifficulty difficulty)
     {
         if (!await ConfirmSettingsChangeAsync(Messages.Get("confirm.action.changeDifficulty")))
@@ -510,6 +622,11 @@ public sealed partial class MainPage : Page
         await StartNewGameAsync(false);
     }
 
+    /// <summary>
+    /// Changes the board size preset and starts a new game after confirmation.
+    /// </summary>
+    /// <param name="preset">Target board size preset.</param>
+    /// <returns>A task that completes when the setting is applied or the user cancels.</returns>
     private async Task ChangeSizeAsync(GameSettings.BoardSizePreset preset)
     {
         if (!await ConfirmSettingsChangeAsync(Messages.Get("confirm.action.changeSize")))
@@ -523,12 +640,20 @@ public sealed partial class MainPage : Page
         await StartNewGameAsync(false);
     }
 
+    /// <summary>
+    /// Hides the menu bar and focuses the board before showing a fatal error dialog.
+    /// </summary>
     internal void PrepareForFatalErrorDialog()
     {
         MainMenuBar.Visibility = Visibility.Collapsed;
         _ = BoardPanel.Focus(FocusState.Programmatic);
     }
 
+    /// <summary>
+    /// Returns a client point suitable for programmatically dismissing an open menu flyout.
+    /// </summary>
+    /// <param name="clientPoint">When successful, the center-ish point in page client coordinates.</param>
+    /// <returns>True when the page has a non-zero size and a point was computed.</returns>
     internal bool TryGetMenuDismissPoint(out Windows.Foundation.Point clientPoint)
     {
         if (ActualWidth <= 0 || ActualHeight <= 0)
@@ -541,6 +666,10 @@ public sealed partial class MainPage : Page
         return true;
     }
 
+    /// <summary>
+    /// Applies a new tile skin and refreshes the board and objectives preview.
+    /// </summary>
+    /// <param name="skin">Visual skin to use for tile rendering.</param>
     private void ChangeSkin(GameSettings.Skin skin)
     {
         _settings.SkinValue = skin;
@@ -550,6 +679,10 @@ public sealed partial class MainPage : Page
         UpdateObjectivesIfVisible(_session.Board);
     }
 
+    /// <summary>
+    /// Opens the advanced options dialog and applies saved changes to settings and gameplay.
+    /// </summary>
+    /// <returns>A task that completes when the dialog closes and any side effects finish.</returns>
     private async Task OpenAdvancedOptionsAsync()
     {
         var dialog = new AdvancedOptionsDialog(_settings, _session.HasScore(), _soundManager);
@@ -592,6 +725,10 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Opens advanced options on the gameplay tab to configure custom board dimensions.
+    /// </summary>
+    /// <returns>A task that completes when settings are saved and a new game starts.</returns>
     private async Task OpenAdvancedOptionsForCustomSizeAsync()
     {
         var dialog = new AdvancedOptionsDialog(_settings, _session.HasScore(), _soundManager, AdvancedOptionsDialog.TabGameplay);
@@ -609,6 +746,12 @@ public sealed partial class MainPage : Page
         await StartNewGameAsync(false);
     }
 
+    /// <summary>
+    /// Determines whether two settings snapshots differ in gameplay-affecting fields.
+    /// </summary>
+    /// <param name="a">First settings snapshot.</param>
+    /// <param name="b">Second settings snapshot.</param>
+    /// <returns>True when board size, colors, difficulty, randomness, or timer settings differ.</returns>
     private static bool GameplayChanged(GameSettings a, GameSettings b) =>
         a.BoardSizePresetValue != b.BoardSizePresetValue ||
         a.CustomWidth != b.CustomWidth ||
@@ -619,6 +762,9 @@ public sealed partial class MainPage : Page
         a.TimerEnabled != b.TimerEnabled ||
         a.TimerSeconds != b.TimerSeconds;
 
+    /// <summary>
+    /// Toggles objectives panel visibility with a slide animation based on menu check state.
+    /// </summary>
     private async void ToggleObjectives()
     {
         bool show = _objectivesMenuItem?.IsChecked == true;
@@ -633,6 +779,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Opens or closes the high scores window based on menu check state.
+    /// </summary>
     private void ToggleHighScores()
     {
         if (_highScoresMenuItem?.IsChecked == true)
@@ -660,6 +809,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Applies sound and music settings to the sound manager.
+    /// </summary>
     private void ConfigureSound()
     {
         _soundManager.Configure(
@@ -669,6 +821,9 @@ public sealed partial class MainPage : Page
             _settings.BackgroundMusicVolume);
     }
 
+    /// <summary>
+    /// Creates or activates the help window.
+    /// </summary>
     private void ShowHelp()
     {
         if (_helpWindow is null)
@@ -681,6 +836,9 @@ public sealed partial class MainPage : Page
         _helpWindow.Activate();
     }
 
+    /// <summary>
+    /// Synchronizes toggle and radio menu items with current settings and panel visibility.
+    /// </summary>
     private void UpdateMenuChecks()
     {
         if (_soundMenuItem is not null)
@@ -710,6 +868,11 @@ public sealed partial class MainPage : Page
         RefreshStatusLabels();
     }
 
+    /// <summary>
+    /// Sets the checked radio item in the named group to match the given value.
+    /// </summary>
+    /// <param name="groupName">Radio group name shared by submenu items.</param>
+    /// <param name="value">Tag value that should be checked.</param>
     private void SetRadioChecked(string groupName, object value)
     {
         foreach (var menuItem in MainMenuBar.Items.OfType<MenuBarItem>())
@@ -730,6 +893,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Updates score and selection labels and refreshes the main window title.
+    /// </summary>
     private void RefreshStatusLabels()
     {
         SetScore(_session?.Score ?? 0);
@@ -740,16 +906,31 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Updates the status bar with the selected group size and potential points.
+    /// </summary>
+    /// <param name="count">Number of tiles in the selected group.</param>
+    /// <param name="points">Points awarded if the group were removed.</param>
     private void SetSelection(int count, int points)
     {
         CountLabel.Text = Messages.Format("status.count", count);
         PointsLabel.Text = Messages.Format("status.points", points);
     }
 
+    /// <summary>
+    /// Clears the selection status labels by showing zero count and points.
+    /// </summary>
     private void ClearSelection() => SetSelection(0, 0);
 
+    /// <summary>
+    /// Updates the score label with the current session score.
+    /// </summary>
+    /// <param name="score">Current player score.</param>
     private void SetScore(int score) => ScoreLabel.Text = Messages.Format("status.score", score);
 
+    /// <summary>
+    /// Starts the countdown timer when enabled in settings, or clears the timer label.
+    /// </summary>
     private void StartTimerIfEnabled()
     {
         if (!_settings.TimerEnabled)
@@ -763,8 +944,16 @@ public sealed partial class MainPage : Page
         _gameTimer.Start();
     }
 
+    /// <summary>
+    /// Stops the countdown timer without resetting remaining seconds.
+    /// </summary>
     private void StopTimer() => _gameTimer.Stop();
 
+    /// <summary>
+    /// Decrements remaining time each second and triggers game over when time expires.
+    /// </summary>
+    /// <param name="sender">The dispatcher timer.</param>
+    /// <param name="e">Tick event arguments.</param>
     private void GameTimer_Tick(object? sender, object e)
     {
         _remainingSeconds--;
@@ -776,6 +965,9 @@ public sealed partial class MainPage : Page
         }
     }
 
+    /// <summary>
+    /// Formats and displays the remaining time as minutes and seconds.
+    /// </summary>
     private void UpdateTimerLabel()
     {
         int minutes = _remainingSeconds / 60;
@@ -783,18 +975,31 @@ public sealed partial class MainPage : Page
         TimerLabel.Text = Messages.Format("status.time", minutes, seconds);
     }
 
+    /// <summary>
+    /// Shows or hides the board generation loading ring.
+    /// </summary>
+    /// <param name="show">True to display the loading indicator.</param>
     private void ShowLoading(bool show)
     {
         LoadingRing.IsActive = show;
         LoadingRing.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Enables or disables menu and board interaction during long-running operations.
+    /// </summary>
+    /// <param name="enabled">True to allow user input.</param>
     private void SetUiEnabled(bool enabled)
     {
         MainMenuBar.IsEnabled = enabled;
         BoardPanel.IsEnabled = enabled;
     }
 
+    /// <summary>
+    /// Prompts the user before changing settings mid-game after the first move.
+    /// </summary>
+    /// <param name="action">Localized description of the settings change for the dialog body.</param>
+    /// <returns>True when no confirmation is needed or the user chooses to proceed.</returns>
     private async Task<bool> ConfirmSettingsChangeAsync(string action)
     {
         if (!_session.HasStarted())
@@ -811,6 +1016,11 @@ public sealed partial class MainPage : Page
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
+    /// <summary>
+    /// Prompts the user before abandoning a game that already has a score.
+    /// </summary>
+    /// <param name="action">Localized description of the action for the dialog body.</param>
+    /// <returns>True when no score exists or the user chooses to proceed.</returns>
     private async Task<bool> ConfirmAbandonGameAsync(string action)
     {
         if (!_session.HasScore())
@@ -827,6 +1037,11 @@ public sealed partial class MainPage : Page
         return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
+    /// <summary>
+    /// Displays a modal error dialog with the given message body.
+    /// </summary>
+    /// <param name="message">Localized error message to show.</param>
+    /// <returns>A task that completes when the dialog is dismissed.</returns>
     private async Task ShowErrorAsync(string message)
     {
         var dialog = DialogHelper.CreateDialog(Messages.Get("error.title"), message);
@@ -834,6 +1049,10 @@ public sealed partial class MainPage : Page
         await dialog.ShowAsync();
     }
 
+    /// <summary>
+    /// Applies the UI theme to the page, main window content, and auxiliary windows.
+    /// </summary>
+    /// <param name="theme">Light, dark, or system theme setting.</param>
     private void ApplyTheme(GameSettings.UiTheme theme)
     {
         App.CurrentUiTheme = theme;

@@ -2,8 +2,18 @@ using System.Reflection;
 
 namespace SameGame.I18n;
 
+/// <summary>
+/// Discovers available UI languages from embedded locale metadata.
+/// </summary>
 public static class LocaleCatalog
 {
+    /// <summary>
+    /// Loads the map of supported language codes to display names.
+    /// </summary>
+    /// <returns>
+    /// A read-only dictionary of language code to localized language name pairs.
+    /// Falls back to English when the embedded catalog is missing or empty.
+    /// </returns>
     public static IReadOnlyDictionary<string, string> AvailableLanguages()
     {
         var languages = new Dictionary<string, string>();
