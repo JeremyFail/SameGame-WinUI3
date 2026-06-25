@@ -1,4 +1,4 @@
-![SameGame Logo](https://jeremyfail.dev/projects/programs/same-game/img/hero.jpg)
+![SameGame Logo](https://jeremyfail.dev/projects/programs/same-game-winui/img/logo-white.jpg)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
