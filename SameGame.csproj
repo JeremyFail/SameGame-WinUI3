@@ -113,5 +113,6 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/JeremyFail/SameGame-WinUI3</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
+    <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
   </PropertyGroup>
 </Project>
