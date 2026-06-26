@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Windows.Security.ExchangeActiveSyncProvisioning;
@@ -22,7 +21,7 @@ public static class CrashReportFormatter
 
         // Application metadata section.
         AppendSection(report, "Application");
-        AppendLine(report, $"{MainPage.AppName} {GetAppVersion()}");
+        AppendLine(report, $"{MainPage.AppName} {AppInfo.Version}");
         AppendLine(report, $".NET {Environment.Version}");
         AppendLine(report, $"Culture: {System.Globalization.CultureInfo.CurrentUICulture.Name}");
 
@@ -35,18 +34,6 @@ public static class CrashReportFormatter
         AppendException(report, exception);
 
         return report.ToString().TrimEnd();
-    }
-
-    /// <summary>
-    /// Reads the application informational or assembly version string.
-    /// </summary>
-    /// <returns>The version string, or "unknown" when unavailable.</returns>
-    private static string GetAppVersion()
-    {
-        var assembly = Assembly.GetExecutingAssembly();
-        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString()
-            ?? "unknown";
     }
 
     /// <summary>

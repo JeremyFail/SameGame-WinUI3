@@ -44,6 +44,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        AppInfo.Initialize();
         FatalErrorHandler.Install(this);
     }
 

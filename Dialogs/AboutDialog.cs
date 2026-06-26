@@ -31,7 +31,7 @@ public sealed class AboutDialog
         });
         panel.Children.Add(new TextBlock
         {
-            Text = Messages.Format("app.version"),
+            Text = Messages.Format("app.version", AppInfo.Version),
             FontSize = 16,
             Opacity = 0.85,
             HorizontalAlignment = HorizontalAlignment.Center,
