@@ -174,6 +174,11 @@ public static class Messages
             .Replace("\\u00b2", "²")
             .Replace("\\u2212", "−")
             .Replace("\\u2013", "–")
+            .Replace("\\u2014", "—")
+            .Replace("\\u201c", "\u201c")
+            .Replace("\\u201d", "\u201d")
+            .Replace("\\u2192", "→")
+            .Replace("\\u00b7", "·")
             .Replace("\\u2022", "•");
     }
 }

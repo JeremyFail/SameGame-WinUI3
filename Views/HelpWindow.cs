@@ -12,12 +12,14 @@ public sealed class HelpWindow : Window
 {
     private Border? _navBorder;
     private Grid? _rootGrid;
-    private readonly TextBlock _body = new()
+    private readonly ScrollViewer _bodyScroll = new()
     {
-        TextWrapping = TextWrapping.Wrap,
+        VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+    };
+    private readonly StackPanel _bodyHost = new()
+    {
         Padding = new Thickness(20, 16, 20, 20),
-        FontSize = 14,
-        LineHeight = 22
+        Spacing = 4
     };
 
     /// <summary>
@@ -27,6 +29,7 @@ public sealed class HelpWindow : Window
     {
         Title = Messages.Get("help.title");
         WindowHelper.Configure(this, 820, 520, minimumWidth: 560, minimumHeight: 400);
+        _bodyScroll.Content = _bodyHost;
         Content = BuildContent();
         WindowHelper.ApplyWindowTheme(this, App.CurrentUiTheme);
     }
@@ -59,12 +62,12 @@ public sealed class HelpWindow : Window
                 return;
             }
 
-            _body.Text = nav.SelectedIndex switch
+            SetBody(nav.SelectedIndex switch
             {
                 0 => Messages.Get("help.page.howToPlay.body"),
                 1 => Messages.Get("help.page.tips.body"),
                 _ => Messages.Get("help.page.options.body")
-            };
+            });
         };
 
         _navBorder = new Border
@@ -82,17 +85,23 @@ public sealed class HelpWindow : Window
         _rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _rootGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         _rootGrid.ColumnSpacing = 12;
-        var bodyScroll = new ScrollViewer
-        {
-            Content = _body,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-        };
         Grid.SetColumn(_navBorder, 0);
-        Grid.SetColumn(bodyScroll, 1);
+        Grid.SetColumn(_bodyScroll, 1);
         _rootGrid.Children.Add(_navBorder);
-        _rootGrid.Children.Add(bodyScroll);
+        _rootGrid.Children.Add(_bodyScroll);
         nav.SelectedIndex = 0;
         return _rootGrid;
+    }
+
+    /// <summary>
+    /// Replaces the scrollable help body with formatted content for the selected topic.
+    /// </summary>
+    /// <param name="markup">Localized help markup for the active page.</param>
+    private void SetBody(string markup)
+    {
+        _bodyHost.Children.Clear();
+        _bodyHost.Children.Add(HelpTextFormatter.Build(markup));
+        _bodyScroll.ChangeView(null, 0, null, disableAnimation: true);
     }
 
     /// <summary>
