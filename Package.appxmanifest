@@ -10,7 +10,7 @@
   <Identity
     Name="JeremyFail.SameGame"
     Publisher="CN=09B7C492-A621-4C39-9F14-646A9E154F28"
-    Version="1.0.0.0" />
+    Version="1.0.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="723fc339-3ee9-4f05-baae-7620a1be91b4" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
