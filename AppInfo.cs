@@ -18,8 +18,22 @@ public static class AppInfo
     public static void Initialize()
     {
         var assembly = Assembly.GetExecutingAssembly();
-        Version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString()
-            ?? "unknown";
+        var raw = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString();
+        Version = FormatDisplayVersion(raw);
+    }
+
+    /// <summary>
+    /// Strips SemVer build metadata (e.g. git commit hash after <c>+</c>) for user-facing display.
+    /// </summary>
+    private static string FormatDisplayVersion(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "unknown";
+        }
+
+        int plus = raw.IndexOf('+');
+        return plus >= 0 ? raw[..plus] : raw;
     }
 }
